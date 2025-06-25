@@ -271,179 +271,22 @@ export default function MemberPackageDetailsPage() {
     try {
       setIsProcessing(true);
 
-      // Update member package payment status
-      const { error: updateError } = await supabase
-        .from("member_packages")
-        .update({
-          payment_status: "completed",
-          wifi_credential_id: selectedWifiCredential,
-          is_current: true,
-          payment_date: new Date().toISOString(),
-        })
-        .eq("id", params.id);
+      const response = await fetch("/api/packages/update-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          packageSelectionId: params.id,
+          status: "completed",
+          wifiCredentialId: selectedWifiCredential || null,
+        }),
+      });
 
-      if (updateError) {
-        console.error("Error updating payment status:", updateError);
-        toast.error("Failed to confirm payment");
-        return;
-      }
+      const result = await response.json();
 
-      // Check if the wifi_credentials table has an assigned_to column
-      const { data: tableInfo, error: tableError } = await supabase.rpc(
-        "check_column_exists",
-        {
-          table_name: "wifi_credentials",
-          column_name: "assigned_to",
-        }
-      );
-
-      if (tableError) {
-        console.error("Error checking column existence:", tableError);
-      } else {
-        const hasAssignedTo = tableInfo;
-
-        if (hasAssignedTo) {
-          // Mark WiFi credential as assigned using assigned_to
-          const { error: wifiError } = await supabase
-            .from("wifi_credentials")
-            .update({
-              assigned_to: memberPackage?.member_id,
-              is_assigned: true,
-            })
-            .eq("id", selectedWifiCredential);
-
-          if (wifiError) {
-            console.error("Error updating WiFi credential:", wifiError);
-            toast.error("Failed to assign WiFi credential");
-            return;
-          }
-        } else {
-          // Mark WiFi credential as assigned using is_assigned only
-          const { error: wifiError } = await supabase
-            .from("wifi_credentials")
-            .update({
-              is_assigned: true,
-            })
-            .eq("id", selectedWifiCredential);
-
-          if (wifiError) {
-            console.error("Error updating WiFi credential:", wifiError);
-            toast.error("Failed to assign WiFi credential");
-            return;
-          }
-        }
-      }
-
-      // Get the selected WiFi credential details
-      const { data: wifiData, error: wifiDataError } = await supabase
-        .from("wifi_credentials")
-        .select("*")
-        .eq("id", selectedWifiCredential)
-        .single();
-
-      if (wifiDataError) {
-        console.error("Error fetching WiFi credential details:", wifiDataError);
-      }
-
-      // Send confirmation email
-      if (member && packageDetails && wifiData) {
-        try {
-          await fetch("/api/send-package-confirmation", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              to: member.email,
-              subject: "Package Confirmation and WiFi Access",
-              memberDetails: {
-                name: member.name,
-                email: member.email,
-                memberId: member.member_id,
-              },
-              packageDetails: {
-                name: packageDetails.name,
-                price: packageDetails.price,
-                duration_days: packageDetails.duration_days,
-                features: packageDetails.features,
-                start_date: format(
-                  new Date(memberPackage?.start_date || new Date()),
-                  "PPP"
-                ),
-                end_date: format(
-                  new Date(memberPackage?.end_date || new Date()),
-                  "PPP"
-                ),
-              },
-              wifiCredentials: {
-                username: wifiData.username,
-                password: wifiData.password,
-              },
-            }),
-          });
-        } catch (emailError) {
-          console.error("Error sending confirmation email:", emailError);
-        }
-
-        // Send user notification via API
-        try {
-          await fetch("/api/send-user-notification", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId: member.member_id,
-              title: "Package Payment Confirmed",
-              message: `Your payment for the ${packageDetails?.name} package has been confirmed. WiFi credentials have been sent to your email.`,
-              type: "success",
-            }),
-          });
-        } catch (notificationApiError) {
-          console.error(
-            "Error sending user notification via API:",
-            notificationApiError
-          );
-        }
-      }
-
-      // Create admin notification
-      const notificationTitle = "Package Payment Confirmed";
-      const notificationMessage = `Payment for ${packageDetails?.name} package has been confirmed for member ${member?.name} (${member?.member_id}).`;
-
-      const notificationSuccess = await createPackageAdminNotification(
-        params.id as string,
-        notificationTitle,
-        notificationMessage
-      );
-
-      if (!notificationSuccess) {
-        console.error("Failed to create admin notification");
-      }
-
-      // Create user notification directly in the database
-      if (member) {
-        try {
-          const { error: userNotificationError } = await supabase
-            .from("user_notifications")
-            .insert([
-              {
-                user_id: member.member_id,
-                title: "Package Payment Confirmed",
-                message: `Your payment for the ${packageDetails?.name} package has been confirmed. WiFi credentials have been sent to your email.`,
-                type: "success",
-              },
-            ]);
-
-          if (userNotificationError) {
-            console.error(
-              "Error creating user notification:",
-              userNotificationError
-            );
-          }
-        } catch (notificationError) {
-          console.error("Error creating user notification:", notificationError);
-        }
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to confirm payment");
       }
 
       toast.success("Payment confirmed and WiFi credential assigned");
