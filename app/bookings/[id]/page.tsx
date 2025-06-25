@@ -41,9 +41,14 @@ interface BookingData {
   name: string;
   email: string;
   status: string;
-  room_name: string;
+  rooms: {
+    id: string;
+    name: string;
+  };
   room_id: string;
   notes?: string;
+  payment_method: string;
+  attachment_url?: string; // เพิ่มฟิลด์สำหรับ URL ของไฟล์แนบ
 }
 
 // สถานะการจองเรียงตามลำดับ
@@ -329,7 +334,7 @@ export default function BookingDetailsPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Room</h3>
-                    <p>{booking.room_name}</p>
+                    <p>{booking.rooms.name}</p>
                   </div>
                   <div>
                     <h3 className="font-semibold">Date</h3>
@@ -349,6 +354,23 @@ export default function BookingDetailsPage() {
                     <h3 className="font-semibold">Contact Email</h3>
                     <p>{booking.email}</p>
                   </div>
+
+                  <div>
+                    <h3 className="font-semibold">Payment Method</h3>
+                    <p>{booking.payment_method}</p>
+                  </div>
+
+                  {booking.attachment_url && (
+                    <div>
+                      <h3 className="font-semibold">Slip Image</h3>
+                      <img
+                        src={booking.attachment_url}
+                        alt="slip"
+                        className="mt-2 max-h-40 rounded border"
+                      />
+                    </div>
+                  )}
+
                   {booking.notes && (
                     <div className="col-span-2">
                       <h3 className="font-semibold">Notes</h3>

@@ -4,13 +4,13 @@ import { sendPackageSelectedEmail, sendPackageUpgradeRequestEmail } from "@/lib/
 
 // Create Supabase client for server-side
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function POST(request: Request) {
   try {
-    const { memberId, packageId, memberName, packageName, isUpgrade } = await request.json()
+    const { memberId, packageId, memberName, packageName, isUpgrade, paymentMethod, slipImage } = await request.json()
 
     if (!memberId || !packageId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -71,6 +71,8 @@ export async function POST(request: Request) {
       package_id: packageId,
       start_date: today.toISOString(),
       end_date: endDate.toISOString(),
+      payment_method: paymentMethod, 
+      slip_image: slipImage,
       payment_status: "pending",
       is_current: false, // Don't set as current until confirmed, especially for upgrades
     }

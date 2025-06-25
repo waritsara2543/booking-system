@@ -1,15 +1,32 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { AdminSidebar } from "@/components/admin-sidebar"
-import { ArrowLeft, CreditCard, Eye, EyeOff, Loader2, Package, User, Wifi } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { AdminSidebar } from "@/components/admin-sidebar";
+import {
+  ArrowLeft,
+  CreditCard,
+  Eye,
+  EyeOff,
+  Loader2,
+  Package,
+  User,
+  Wallet,
+  Wifi,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,97 +34,114 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Header } from "@/components/header"
-import { createPackageAdminNotification } from "@/lib/notification-utils"
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Header } from "@/components/header";
+import { createPackageAdminNotification } from "@/lib/notification-utils";
 
 type MemberPackage = {
-  id: string
-  member_id: string
-  package_id: string
-  start_date: string
-  end_date: string
-  payment_status: string
-  is_current: boolean
-  wifi_credential_id?: string | null
-  created_at: string
-}
+  id: string;
+  member_id: string;
+  package_id: string;
+  start_date: string;
+  end_date: string;
+  payment_status: string;
+  is_current: boolean;
+  wifi_credential_id?: string | null;
+  created_at: string;
+  payment_method: string;
+  slip_image?: string | null;
+};
 
 type Member = {
-  id: string
-  member_id: string
-  name: string
-  email: string
-  phone: string
-  created_at: string
-}
+  id: string;
+  member_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  created_at: string;
+};
 
 type PackageDetails = {
-  id: string
-  name: string
-  description: string
-  price: number
-  duration_days: number
-  features: string[] | string
-  is_active: boolean
-}
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  duration_days: number;
+  features: string[] | string;
+  is_active: boolean;
+};
 
 type WifiCredential = {
-  id: string
-  username: string
-  password: string
-  is_assigned: boolean
-  is_active: boolean
-  created_at: string
-}
+  id: string;
+  username: string;
+  password: string;
+  is_assigned: boolean;
+  is_active: boolean;
+  created_at: string;
+};
 
 export default function MemberPackageDetailsPage() {
-  const params = useParams()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [memberPackage, setMemberPackage] = useState<MemberPackage | null>(null)
-  const [member, setMember] = useState<Member | null>(null)
-  const [packageDetails, setPackageDetails] = useState<PackageDetails | null>(null)
-  const [wifiCredential, setWifiCredential] = useState<WifiCredential | null>(null)
-  const [availableWifiCredentials, setAvailableWifiCredentials] = useState<WifiCredential[]>([])
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false)
-  const [selectedWifiCredential, setSelectedWifiCredential] = useState<string>("")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const params = useParams();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [memberPackage, setMemberPackage] = useState<MemberPackage | null>(
+    null
+  );
+  const [member, setMember] = useState<Member | null>(null);
+  const [packageDetails, setPackageDetails] = useState<PackageDetails | null>(
+    null
+  );
+  const [wifiCredential, setWifiCredential] = useState<WifiCredential | null>(
+    null
+  );
+  const [availableWifiCredentials, setAvailableWifiCredentials] = useState<
+    WifiCredential[]
+  >([]);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [selectedWifiCredential, setSelectedWifiCredential] =
+    useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    fetchMemberPackageDetails()
-  }, [params.id])
+    fetchMemberPackageDetails();
+  }, [params.id]);
 
   async function fetchMemberPackageDetails() {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       const { data: packageData, error: packageError } = await supabase
         .from("member_packages")
         .select("*")
         .eq("id", params.id)
-        .single()
+        .single();
 
       if (packageError) {
-        console.error("Error fetching member package:", packageError)
-        toast.error("Failed to load member package details")
-        return
+        console.error("Error fetching member package:", packageError);
+        toast.error("Failed to load member package details");
+        return;
       }
 
-      setMemberPackage(packageData)
+      setMemberPackage(packageData);
 
       // Fetch member details
       const { data: memberData, error: memberError } = await supabase
         .from("members")
         .select("*")
         .eq("member_id", packageData.member_id)
-        .single()
+        .single();
 
       if (memberError) {
-        console.error("Error fetching member:", memberError)
+        console.error("Error fetching member:", memberError);
       } else {
-        setMember(memberData)
+        setMember(memberData);
       }
 
       // Fetch package details
@@ -115,16 +149,16 @@ export default function MemberPackageDetailsPage() {
         .from("packages")
         .select("*")
         .eq("id", packageData.package_id)
-        .single()
+        .single();
 
       if (pkgError) {
-        console.error("Error fetching package:", pkgError)
+        console.error("Error fetching package:", pkgError);
       } else {
         // Parse features if they are stored as a JSON string
         if (typeof pkgData.features === "string") {
-          pkgData.features = JSON.parse(pkgData.features)
+          pkgData.features = JSON.parse(pkgData.features);
         }
-        setPackageDetails(pkgData)
+        setPackageDetails(pkgData);
       }
 
       // Fetch WiFi credential if assigned
@@ -133,22 +167,25 @@ export default function MemberPackageDetailsPage() {
           .from("wifi_credentials")
           .select("*")
           .eq("id", packageData.wifi_credential_id)
-          .single()
+          .single();
 
         if (wifiError) {
-          console.error("Error fetching WiFi credential:", wifiError)
+          console.error("Error fetching WiFi credential:", wifiError);
         } else {
-          setWifiCredential(wifiData)
+          setWifiCredential(wifiData);
         }
       }
 
       // Fetch available WiFi credentials
       try {
         // First, check if the is_assigned column exists
-        const { data: columnInfo, error: columnError } = await supabase.from("wifi_credentials").select("id").limit(1)
+        const { data: columnInfo, error: columnError } = await supabase
+          .from("wifi_credentials")
+          .select("id")
+          .limit(1);
 
         if (columnError) {
-          console.error("Error checking wifi_credentials table:", columnError)
+          console.error("Error checking wifi_credentials table:", columnError);
         }
 
         // Determine which query to use based on the table structure
@@ -156,71 +193,83 @@ export default function MemberPackageDetailsPage() {
           .from("wifi_credentials")
           .select("*")
           .eq("is_active", true)
-          .order("created_at", { ascending: true })
+          .order("created_at", { ascending: true });
 
         // Check if the table has is_assigned column
-        const { data: tableInfo, error: tableError } = await supabase.rpc("check_column_exists", {
-          table_name: "wifi_credentials",
-          column_name: "is_assigned",
-        })
+        const { data: tableInfo, error: tableError } = await supabase.rpc(
+          "check_column_exists",
+          {
+            table_name: "wifi_credentials",
+            column_name: "is_assigned",
+          }
+        );
 
         if (tableError) {
-          console.error("Error checking column existence:", tableError)
+          console.error("Error checking column existence:", tableError);
         } else {
-          const hasIsAssigned = tableInfo
+          const hasIsAssigned = tableInfo;
 
           if (hasIsAssigned) {
             // If is_assigned column exists, use it in the query
-            query = query.eq("is_assigned", false)
+            query = query.eq("is_assigned", false);
           } else {
             // Otherwise, use a different approach
             // Get all wifi credentials that are not assigned to any package
-            const { data: assignedCredentials, error: assignedError } = await supabase
-              .from("member_packages")
-              .select("wifi_credential_id")
-              .not("wifi_credential_id", "is", null)
+            const { data: assignedCredentials, error: assignedError } =
+              await supabase
+                .from("member_packages")
+                .select("wifi_credential_id")
+                .not("wifi_credential_id", "is", null);
 
             if (assignedError) {
-              console.error("Error fetching assigned credentials:", assignedError)
+              console.error(
+                "Error fetching assigned credentials:",
+                assignedError
+              );
             } else {
               // Get the IDs of assigned credentials
-              const assignedIds = assignedCredentials.map((item) => item.wifi_credential_id)
+              const assignedIds = assignedCredentials.map(
+                (item) => item.wifi_credential_id
+              );
 
               // If there are assigned credentials, exclude them from the query
               if (assignedIds.length > 0) {
-                query = query.not("id", "in", assignedIds)
+                query = query.not("id", "in", assignedIds);
               }
             }
           }
         }
 
         // Execute the final query
-        const { data: availableWifi, error: availableWifiError } = await query
+        const { data: availableWifi, error: availableWifiError } = await query;
 
         if (availableWifiError) {
-          console.error("Error fetching available WiFi credentials:", availableWifiError)
+          console.error(
+            "Error fetching available WiFi credentials:",
+            availableWifiError
+          );
         } else {
-          setAvailableWifiCredentials(availableWifi || [])
+          setAvailableWifiCredentials(availableWifi || []);
         }
       } catch (error) {
-        console.error("Error fetching available WiFi credentials:", error)
+        console.error("Error fetching available WiFi credentials:", error);
       }
     } catch (error) {
-      console.error("Error:", error)
-      toast.error("An error occurred while loading data")
+      console.error("Error:", error);
+      toast.error("An error occurred while loading data");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   async function handleConfirmPayment() {
     if (!selectedWifiCredential) {
-      toast.error("Please select a WiFi credential to assign")
-      return
+      toast.error("Please select a WiFi credential to assign");
+      return;
     }
 
     try {
-      setIsProcessing(true)
+      setIsProcessing(true);
 
       // Update member package payment status
       const { error: updateError } = await supabase
@@ -228,25 +277,30 @@ export default function MemberPackageDetailsPage() {
         .update({
           payment_status: "completed",
           wifi_credential_id: selectedWifiCredential,
+          is_current: true,
+          payment_date: new Date().toISOString(),
         })
-        .eq("id", params.id)
+        .eq("id", params.id);
 
       if (updateError) {
-        console.error("Error updating payment status:", updateError)
-        toast.error("Failed to confirm payment")
-        return
+        console.error("Error updating payment status:", updateError);
+        toast.error("Failed to confirm payment");
+        return;
       }
 
       // Check if the wifi_credentials table has an assigned_to column
-      const { data: tableInfo, error: tableError } = await supabase.rpc("check_column_exists", {
-        table_name: "wifi_credentials",
-        column_name: "assigned_to",
-      })
+      const { data: tableInfo, error: tableError } = await supabase.rpc(
+        "check_column_exists",
+        {
+          table_name: "wifi_credentials",
+          column_name: "assigned_to",
+        }
+      );
 
       if (tableError) {
-        console.error("Error checking column existence:", tableError)
+        console.error("Error checking column existence:", tableError);
       } else {
-        const hasAssignedTo = tableInfo
+        const hasAssignedTo = tableInfo;
 
         if (hasAssignedTo) {
           // Mark WiFi credential as assigned using assigned_to
@@ -256,12 +310,12 @@ export default function MemberPackageDetailsPage() {
               assigned_to: memberPackage?.member_id,
               is_assigned: true,
             })
-            .eq("id", selectedWifiCredential)
+            .eq("id", selectedWifiCredential);
 
           if (wifiError) {
-            console.error("Error updating WiFi credential:", wifiError)
-            toast.error("Failed to assign WiFi credential")
-            return
+            console.error("Error updating WiFi credential:", wifiError);
+            toast.error("Failed to assign WiFi credential");
+            return;
           }
         } else {
           // Mark WiFi credential as assigned using is_assigned only
@@ -270,12 +324,12 @@ export default function MemberPackageDetailsPage() {
             .update({
               is_assigned: true,
             })
-            .eq("id", selectedWifiCredential)
+            .eq("id", selectedWifiCredential);
 
           if (wifiError) {
-            console.error("Error updating WiFi credential:", wifiError)
-            toast.error("Failed to assign WiFi credential")
-            return
+            console.error("Error updating WiFi credential:", wifiError);
+            toast.error("Failed to assign WiFi credential");
+            return;
           }
         }
       }
@@ -285,10 +339,10 @@ export default function MemberPackageDetailsPage() {
         .from("wifi_credentials")
         .select("*")
         .eq("id", selectedWifiCredential)
-        .single()
+        .single();
 
       if (wifiDataError) {
-        console.error("Error fetching WiFi credential details:", wifiDataError)
+        console.error("Error fetching WiFi credential details:", wifiDataError);
       }
 
       // Send confirmation email
@@ -312,17 +366,23 @@ export default function MemberPackageDetailsPage() {
                 price: packageDetails.price,
                 duration_days: packageDetails.duration_days,
                 features: packageDetails.features,
-                start_date: format(new Date(memberPackage?.start_date || new Date()), "PPP"),
-                end_date: format(new Date(memberPackage?.end_date || new Date()), "PPP"),
+                start_date: format(
+                  new Date(memberPackage?.start_date || new Date()),
+                  "PPP"
+                ),
+                end_date: format(
+                  new Date(memberPackage?.end_date || new Date()),
+                  "PPP"
+                ),
               },
               wifiCredentials: {
                 username: wifiData.username,
                 password: wifiData.password,
               },
             }),
-          })
+          });
         } catch (emailError) {
-          console.error("Error sending confirmation email:", emailError)
+          console.error("Error sending confirmation email:", emailError);
         }
 
         // Send user notification via API
@@ -338,54 +398,62 @@ export default function MemberPackageDetailsPage() {
               message: `Your payment for the ${packageDetails?.name} package has been confirmed. WiFi credentials have been sent to your email.`,
               type: "success",
             }),
-          })
+          });
         } catch (notificationApiError) {
-          console.error("Error sending user notification via API:", notificationApiError)
+          console.error(
+            "Error sending user notification via API:",
+            notificationApiError
+          );
         }
       }
 
       // Create admin notification
-      const notificationTitle = "Package Payment Confirmed"
-      const notificationMessage = `Payment for ${packageDetails?.name} package has been confirmed for member ${member?.name} (${member?.member_id}).`
+      const notificationTitle = "Package Payment Confirmed";
+      const notificationMessage = `Payment for ${packageDetails?.name} package has been confirmed for member ${member?.name} (${member?.member_id}).`;
 
       const notificationSuccess = await createPackageAdminNotification(
         params.id as string,
         notificationTitle,
-        notificationMessage,
-      )
+        notificationMessage
+      );
 
       if (!notificationSuccess) {
-        console.error("Failed to create admin notification")
+        console.error("Failed to create admin notification");
       }
 
       // Create user notification directly in the database
       if (member) {
         try {
-          const { error: userNotificationError } = await supabase.from("user_notifications").insert([
-            {
-              user_id: member.member_id,
-              title: "Package Payment Confirmed",
-              message: `Your payment for the ${packageDetails?.name} package has been confirmed. WiFi credentials have been sent to your email.`,
-              type: "success",
-            },
-          ])
+          const { error: userNotificationError } = await supabase
+            .from("user_notifications")
+            .insert([
+              {
+                user_id: member.member_id,
+                title: "Package Payment Confirmed",
+                message: `Your payment for the ${packageDetails?.name} package has been confirmed. WiFi credentials have been sent to your email.`,
+                type: "success",
+              },
+            ]);
 
           if (userNotificationError) {
-            console.error("Error creating user notification:", userNotificationError)
+            console.error(
+              "Error creating user notification:",
+              userNotificationError
+            );
           }
         } catch (notificationError) {
-          console.error("Error creating user notification:", notificationError)
+          console.error("Error creating user notification:", notificationError);
         }
       }
 
-      toast.success("Payment confirmed and WiFi credential assigned")
-      setIsConfirmDialogOpen(false)
-      fetchMemberPackageDetails() // Refresh data
+      toast.success("Payment confirmed and WiFi credential assigned");
+      setIsConfirmDialogOpen(false);
+      fetchMemberPackageDetails(); // Refresh data
     } catch (error) {
-      console.error("Error:", error)
-      toast.error("An error occurred. Please try again.")
+      console.error("Error:", error);
+      toast.error("An error occurred. Please try again.");
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
   }
 
@@ -400,7 +468,7 @@ export default function MemberPackageDetailsPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -447,7 +515,9 @@ export default function MemberPackageDetailsPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">Member information not available</p>
+                  <p className="text-muted-foreground">
+                    Member information not available
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -464,24 +534,36 @@ export default function MemberPackageDetailsPage() {
                 {packageDetails ? (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Package Name</p>
+                      <p className="text-sm text-muted-foreground">
+                        Package Name
+                      </p>
                       <p className="font-medium">{packageDetails.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Description</p>
-                      <p className="font-medium">{packageDetails.description || "No description"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Description
+                      </p>
+                      <p className="font-medium">
+                        {packageDetails.description || "No description"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Price</p>
-                      <p className="font-medium">฿{packageDetails.price.toFixed(2)}</p>
+                      <p className="font-medium">
+                        ฿{packageDetails.price.toFixed(2)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-medium">{packageDetails.duration_days} days</p>
+                      <p className="font-medium">
+                        {packageDetails.duration_days} days
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">Package information not available</p>
+                  <p className="text-muted-foreground">
+                    Package information not available
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -499,40 +581,57 @@ export default function MemberPackageDetailsPage() {
                       memberPackage?.payment_status === "completed"
                         ? "default"
                         : memberPackage?.payment_status === "pending"
-                          ? "outline"
-                          : "destructive"
+                        ? "outline"
+                        : "destructive"
                     }
                   >
                     {memberPackage?.payment_status}
                   </Badge>
                 </div>
                 <CardDescription>
-                  {memberPackage?.is_current ? "Current active subscription" : "Inactive subscription"}
+                  {memberPackage?.is_current
+                    ? "Current active subscription"
+                    : "Inactive subscription"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {memberPackage ? (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Start Date</p>
-                      <p className="font-medium">{format(new Date(memberPackage.start_date), "PPP")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Start Date
+                      </p>
+                      <p className="font-medium">
+                        {format(new Date(memberPackage.start_date), "PPP")}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">End Date</p>
-                      <p className="font-medium">{format(new Date(memberPackage.end_date), "PPP")}</p>
+                      <p className="font-medium">
+                        {format(new Date(memberPackage.end_date), "PPP")}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Subscription Status</p>
-                      <p className="font-medium">{memberPackage.is_current ? "Active" : "Inactive"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Subscription Status
+                      </p>
+                      <p className="font-medium">
+                        {memberPackage.is_current ? "Active" : "Inactive"}
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">Subscription details not available</p>
+                  <p className="text-muted-foreground">
+                    Subscription details not available
+                  </p>
                 )}
               </CardContent>
               <CardFooter>
                 {memberPackage?.payment_status === "pending" && (
-                  <Button onClick={() => setIsConfirmDialogOpen(true)} className="w-full">
+                  <Button
+                    onClick={() => setIsConfirmDialogOpen(true)}
+                    className="w-full"
+                  >
                     Confirm Payment
                   </Button>
                 )}
@@ -563,14 +662,22 @@ export default function MemberPackageDetailsPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Password</p>
                     <div className="flex items-center">
-                      <p className="font-medium mr-2">{showPassword ? wifiCredential.password : "••••••••••••"}</p>
+                      <p className="font-medium mr-2">
+                        {showPassword
+                          ? wifiCredential.password
+                          : "••••••••••••"}
+                      </p>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => setShowPassword(!showPassword)}
                         className="h-8 w-8"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -584,6 +691,47 @@ export default function MemberPackageDetailsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/*payment Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Wallet className="h-5 w-5 mr-2" />
+                Payment
+              </CardTitle>
+              <CardDescription>
+                {memberPackage?.payment_status === "completed"
+                  ? "Payment has been completed for this package"
+                  : "Payment is pending for this package"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Payment Method
+                  </p>
+                  <p className="font-medium">
+                    {memberPackage?.payment_method || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Slip Image</p>
+                  {memberPackage?.slip_image ? (
+                    <img
+                      src={memberPackage.slip_image}
+                      alt="Payment Slip"
+                      className="w-full h-auto rounded-md"
+                    />
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No payment slip uploaded
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </main>
       </div>
 
@@ -593,14 +741,20 @@ export default function MemberPackageDetailsPage() {
           <DialogHeader>
             <DialogTitle>Confirm Package Payment</DialogTitle>
             <DialogDescription>
-              Confirm payment for this package and assign WiFi credentials to the member.
+              Confirm payment for this package and assign WiFi credentials to
+              the member.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-4">
               <div>
-                <p className="text-sm font-medium mb-2">Select WiFi Credentials to Assign</p>
-                <Select value={selectedWifiCredential} onValueChange={setSelectedWifiCredential}>
+                <p className="text-sm font-medium mb-2">
+                  Select WiFi Credentials to Assign
+                </p>
+                <Select
+                  value={selectedWifiCredential}
+                  onValueChange={setSelectedWifiCredential}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select WiFi credentials" />
                   </SelectTrigger>
@@ -622,17 +776,25 @@ export default function MemberPackageDetailsPage() {
 
               <div className="text-sm text-muted-foreground">
                 <p>
-                  This will mark the payment as completed, assign the selected WiFi credentials to the member, and send
-                  a confirmation email with the WiFi details.
+                  This will mark the payment as completed, assign the selected
+                  WiFi credentials to the member, and send a confirmation email
+                  with the WiFi details.
                 </p>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfirmDialogOpen(false)} disabled={isProcessing}>
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmDialogOpen(false)}
+              disabled={isProcessing}
+            >
               Cancel
             </Button>
-            <Button onClick={handleConfirmPayment} disabled={isProcessing || !selectedWifiCredential}>
+            <Button
+              onClick={handleConfirmPayment}
+              disabled={isProcessing || !selectedWifiCredential}
+            >
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -646,5 +808,5 @@ export default function MemberPackageDetailsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

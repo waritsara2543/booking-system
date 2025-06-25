@@ -4,7 +4,7 @@ import { sendPackageConfirmedEmail, sendPackageCancelledEmail, sendPackageUpgrad
 
 // Create Supabase client for server-side
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -255,7 +255,7 @@ export async function POST(request: Request) {
 
       const { error: adminNotificationError } = await supabase.from("admin_notifications").insert([
         {
-          entity_id: packageSelectionId,
+          booking_id: packageSelectionId,
           title: notificationTitle,
           message: notificationMessage,
           type: "package",
@@ -286,7 +286,7 @@ export async function POST(request: Request) {
           title: userNotificationTitle,
           message: userNotificationMessage,
           type: "package",
-          read: false,
+          is_read: false,
         },
       ])
 

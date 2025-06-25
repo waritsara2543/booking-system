@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     console.log("Starting to fetch bookings...")
 
     // ตรวจสอบ environment variables
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (!process.env.SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) {
       console.error("Missing Supabase environment variables")
       return NextResponse.json(
         {

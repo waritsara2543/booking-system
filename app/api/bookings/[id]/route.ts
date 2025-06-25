@@ -10,7 +10,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return new NextResponse("Booking ID is required", { status: 400 })
     }
 
-    const { data: booking, error } = await supabaseServer.from("room_bookings").select("*").eq("id", id).single()
+    const { data: booking, error } = await supabaseServer.from("room_bookings").select(`*, rooms!fk_room (
+      id,
+      name    )`).eq("id", id).single()
 
     if (error) {
       console.error("Supabase error:", error)

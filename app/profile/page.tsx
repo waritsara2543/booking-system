@@ -1,17 +1,31 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { supabase } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Header } from "@/components/header";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   AlertCircle,
   Loader2,
@@ -32,16 +46,16 @@ import {
   UserCircle,
   Sparkles,
   RefreshCw,
-} from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
-import { isAfter, parseISO, format } from "date-fns"
-import { Separator } from "@/components/ui/separator"
-import { Progress } from "@/components/ui/progress"
-import { motion } from "framer-motion"
-import { InteractiveMembershipCard } from "@/components/interactive-membership-card"
-import { TestUserNotificationButton } from "@/components/test-user-notification-button"
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { isAfter, parseISO, format } from "date-fns";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { motion } from "framer-motion";
+import { InteractiveMembershipCard } from "@/components/interactive-membership-card";
+import { TestUserNotificationButton } from "@/components/test-user-notification-button";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -58,67 +72,73 @@ const formSchema = z.object({
   }),
   position: z.string().optional(),
   bio: z.string().optional(),
-})
+});
 
 type Member = {
-  id: string
-  member_id: string
-  name: string
-  email: string
-  phone: string
-  position?: string
-  bio?: string
-  verified: boolean
-  created_at: string
-  profile_picture_url?: string
-}
+  id: string;
+  member_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  position?: string;
+  bio?: string;
+  verified: boolean;
+  created_at: string;
+  profile_picture_url?: string;
+};
 
 type MemberPackage = {
-  id: string
-  package_id: string
-  start_date: string
-  end_date: string
-  payment_status: string
-  payment_method?: string
-  payment_amount?: number
-  payment_date?: string
-  wifi_credential_id?: string
-  is_current: boolean
-  notes?: string
-  created_at: string
-  updated_at: string
-  is_upgrade?: boolean
+  id: string;
+  package_id: string;
+  start_date: string;
+  end_date: string;
+  payment_status: string;
+  payment_method?: string;
+  payment_amount?: number;
+  payment_date?: string;
+  wifi_credential_id?: string;
+  is_current: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  is_upgrade?: boolean;
   package_details: {
-    id: string
-    name: string
-    description?: string
-    price: number
-    duration_days: number
-    features: string[]
-    is_active: boolean
-    card_design_url?: string
-  }
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    duration_days: number;
+    features: string[];
+    is_active: boolean;
+    card_design_url?: string;
+  };
   wifi_credentials?: {
-    id: string
-    username: string
-    password: string
-  }
-}
+    id: string;
+    username: string;
+    password: string;
+  };
+};
 
 export default function ProfilePage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [member, setMember] = useState<Member | null>(null)
-  const [memberId, setMemberId] = useState<string | null>(null)
-  const [memberPackage, setMemberPackage] = useState<MemberPackage | null>(null)
-  const [showWifiPassword, setShowWifiPassword] = useState(false)
-  const [profilePictureUrl, setProfilePictureUrl] = useState<string>("")
-  const [membershipProgress, setMembershipProgress] = useState(0)
-  const [pendingPackage, setPendingPackage] = useState<MemberPackage | null>(null)
-  const [upgradePackage, setUpgradePackage] = useState<MemberPackage | null>(null)
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [member, setMember] = useState<Member | null>(null);
+  const [memberId, setMemberId] = useState<string | null>(null);
+  const [memberPackage, setMemberPackage] = useState<MemberPackage | null>(
+    null
+  );
+  const [showWifiPassword, setShowWifiPassword] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
+  const [membershipProgress, setMembershipProgress] = useState(0);
+  const [pendingPackage, setPendingPackage] = useState<MemberPackage | null>(
+    null
+  );
+  const [upgradePackage, setUpgradePackage] = useState<MemberPackage | null>(
+    null
+  );
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -129,67 +149,78 @@ export default function ProfilePage() {
       position: "",
       bio: "",
     },
-  })
+  });
 
   useEffect(() => {
     // Check if user is logged in
     try {
-      const storedMemberId = localStorage.getItem("memberId")
-      const memberEmail = localStorage.getItem("memberEmail")
+      const storedMemberId = localStorage.getItem("memberId");
+      const memberEmail = localStorage.getItem("memberEmail");
 
       if (!storedMemberId || !memberEmail) {
-        router.push("/login")
-        return
+        router.push("/login");
+        return;
       }
 
-      setMemberId(storedMemberId)
-      fetchMemberDetails(storedMemberId)
-      fetchAllPackages(storedMemberId)
+      setMemberId(storedMemberId);
+      fetchMemberDetails(storedMemberId);
+      fetchAllPackages(storedMemberId);
     } catch (error) {
-      console.error("Error accessing localStorage:", error)
-      router.push("/login")
+      console.error("Error accessing localStorage:", error);
+      router.push("/login");
     }
-  }, [router])
+  }, [router]);
 
   useEffect(() => {
     if (memberPackage) {
       // Calculate membership progress
-      const startDate = new Date(memberPackage.start_date).getTime()
-      const endDate = new Date(memberPackage.end_date).getTime()
-      const currentDate = new Date().getTime()
+      const startDate = new Date(memberPackage.start_date).getTime();
+      const endDate = new Date(memberPackage.end_date).getTime();
+      const currentDate = new Date().getTime();
 
-      const totalDuration = endDate - startDate
-      const elapsed = currentDate - startDate
+      const totalDuration = endDate - startDate;
+      const elapsed = currentDate - startDate;
 
-      const progress = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100))
-      setMembershipProgress(progress)
+      const progress = Math.max(
+        0,
+        Math.min(100, (elapsed / totalDuration) * 100)
+      );
+      setMembershipProgress(progress);
     }
-  }, [memberPackage])
+  }, [memberPackage]);
 
   async function fetchMemberDetails(memberId: string) {
     try {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
-      const { data, error } = await supabase.from("members").select("*").eq("member_id", memberId).single()
+      const { data, error } = await supabase
+        .from("members")
+        .select("*")
+        .eq("member_id", memberId)
+        .single();
 
       if (error) {
-        console.error("Error fetching member details:", error)
-        throw new Error("Failed to load your profile. Please try again.")
+        console.error("Error fetching member details:", error);
+        throw new Error("Failed to load your profile. Please try again.");
       }
 
       if (!data) {
-        throw new Error("Member not found")
+        throw new Error("Member not found");
       }
 
-      setMember(data)
+      setMember(data);
 
       // Validate profile picture URL before setting it
-      const pictureUrl = data.profile_picture_url
-      if (pictureUrl && typeof pictureUrl === "string" && pictureUrl.trim() !== "") {
-        setProfilePictureUrl(pictureUrl)
+      const pictureUrl = data.profile_picture_url;
+      if (
+        pictureUrl &&
+        typeof pictureUrl === "string" &&
+        pictureUrl.trim() !== ""
+      ) {
+        setProfilePictureUrl(pictureUrl);
       } else {
-        setProfilePictureUrl("")
+        setProfilePictureUrl("");
       }
 
       // Set form values
@@ -199,23 +230,27 @@ export default function ProfilePage() {
         phone: data.phone || "",
         position: data.position || "",
         bio: data.bio || "",
-      })
+      });
     } catch (err) {
-      console.error("Error:", err)
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+      console.error("Error:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An error occurred. Please try again."
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   async function fetchAllPackages(memberId: string) {
     try {
-      console.log("Fetching all packages for member:", memberId)
+      console.log("Fetching all packages for member:", memberId);
 
       // Reset states
-      setMemberPackage(null)
-      setPendingPackage(null)
-      setUpgradePackage(null)
+      setMemberPackage(null);
+      setPendingPackage(null);
+      setUpgradePackage(null);
 
       // Get all packages for this member
       const { data: allPackages, error } = await supabase
@@ -229,81 +264,92 @@ export default function ProfilePage() {
         wifi_credentials:wifi_credential_id (
           id, username, password
         )
-      `,
+      `
         )
         .eq("member_id", memberId)
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching packages:", error)
-        return
+        console.error("Error fetching packages:", error);
+        return;
       }
 
-      console.log("All packages found:", allPackages)
+      console.log("All packages found:", allPackages);
 
       if (allPackages && allPackages.length > 0) {
         // Parse features for all packages
         allPackages.forEach((pkg) => {
-          if (pkg.package_details && typeof pkg.package_details.features === "string") {
-            pkg.package_details.features = JSON.parse(pkg.package_details.features)
+          if (
+            pkg.package_details &&
+            typeof pkg.package_details.features === "string"
+          ) {
+            pkg.package_details.features = JSON.parse(
+              pkg.package_details.features
+            );
           }
-        })
+        });
 
         // Find current active package
-        const currentPackage = allPackages.find((pkg) => pkg.is_current === true && pkg.payment_status === "completed")
+        const currentPackage = allPackages.find(
+          (pkg) => pkg.is_current === true && pkg.payment_status === "completed"
+        );
 
         // Find pending upgrade package
-        const pendingUpgrade = allPackages.find((pkg) => pkg.payment_status === "pending" && pkg.is_upgrade === true)
+        const pendingUpgrade = allPackages.find(
+          (pkg) => pkg.payment_status === "pending" && pkg.is_upgrade === true
+        );
 
         // Find regular pending package (not upgrade)
         const pendingRegular = allPackages.find(
-          (pkg) => pkg.payment_status === "pending" && (pkg.is_upgrade === false || pkg.is_upgrade === null),
-        )
+          (pkg) =>
+            pkg.payment_status === "pending" &&
+            (pkg.is_upgrade === false || pkg.is_upgrade === null)
+        );
 
         console.log("Package categorization:", {
           currentPackage: currentPackage?.id,
           pendingUpgrade: pendingUpgrade?.id,
           pendingRegular: pendingRegular?.id,
-        })
+        });
 
         if (currentPackage) {
-          setMemberPackage(currentPackage)
+          setMemberPackage(currentPackage);
         }
 
         if (pendingUpgrade) {
-          setUpgradePackage(pendingUpgrade)
+          setUpgradePackage(pendingUpgrade);
         }
 
         if (pendingRegular && !currentPackage) {
-          setPendingPackage(pendingRegular)
+          setPendingPackage(pendingRegular);
         }
       }
     } catch (error) {
-      console.error("Error fetching packages:", error)
+      console.error("Error fetching packages:", error);
     }
   }
 
   async function refreshPackages() {
-    if (!memberId) return
+    if (!memberId) return;
 
-    setIsRefreshing(true)
+    setIsRefreshing(true);
     try {
-      await fetchAllPackages(memberId)
-      toast.success("Package information refreshed")
+      await fetchAllPackages(memberId);
+      toast.success("Package information refreshed");
     } catch (error) {
-      console.error("Error refreshing packages:", error)
-      toast.error("Failed to refresh package information")
+      console.error("Error refreshing packages:", error);
+      toast.error("Failed to refresh package information");
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!member) return
+    if (!member) return;
 
     try {
-      setIsSaving(true)
-      setError(null)
+      setIsSaving(true);
+      setError(null);
 
       // Update member details
       const { error } = await supabase
@@ -315,12 +361,12 @@ export default function ProfilePage() {
           bio: values.bio,
           profile_picture_url: profilePictureUrl,
         })
-        .eq("id", member.id)
+        .eq("id", member.id);
 
-      if (error) throw error
+      if (error) throw error;
 
       // Update local storage
-      localStorage.setItem("memberName", values.name)
+      localStorage.setItem("memberName", values.name);
 
       // Update state
       setMember({
@@ -330,45 +376,51 @@ export default function ProfilePage() {
         position: values.position,
         bio: values.bio,
         profile_picture_url: profilePictureUrl,
-      })
+      });
 
-      toast.success("Profile updated successfully")
+      toast.success("Profile updated successfully");
     } catch (err) {
-      console.error("Error updating profile:", err)
-      setError(err instanceof Error ? err.message : "Failed to update profile. Please try again.")
-      toast.error("Failed to update profile")
+      console.error("Error updating profile:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update profile. Please try again."
+      );
+      toast.error("Failed to update profile");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
   const handleProfilePictureUploaded = (url: string) => {
-    setProfilePictureUrl(url)
-  }
+    setProfilePictureUrl(url);
+  };
 
-  const isPackageActive = memberPackage && isAfter(parseISO(memberPackage.end_date), new Date())
-  const isPackageConfirmed = memberPackage && memberPackage.payment_status === "completed"
+  const isPackageActive =
+    memberPackage && isAfter(parseISO(memberPackage.end_date), new Date());
+  const isPackageConfirmed =
+    memberPackage && memberPackage.payment_status === "completed";
 
   // Get feature icon based on feature text
   const getFeatureIcon = (feature: string) => {
-    const lowerFeature = feature.toLowerCase()
+    const lowerFeature = feature.toLowerCase();
 
     if (lowerFeature.includes("wifi") || lowerFeature.includes("internet"))
-      return <Wifi className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+      return <Wifi className="h-4 w-4 text-primary mr-2 flex-shrink-0" />;
     if (lowerFeature.includes("print") || lowerFeature.includes("scan"))
-      return <Wifi className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+      return <Wifi className="h-4 w-4 text-primary mr-2 flex-shrink-0" />;
     if (lowerFeature.includes("hour") || lowerFeature.includes("time"))
-      return <Clock className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+      return <Clock className="h-4 w-4 text-primary mr-2 flex-shrink-0" />;
     if (lowerFeature.includes("access") || lowerFeature.includes("entry"))
-      return <Shield className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+      return <Shield className="h-4 w-4 text-primary mr-2 flex-shrink-0" />;
     if (lowerFeature.includes("discount") || lowerFeature.includes("off"))
-      return <CreditCard className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+      return <CreditCard className="h-4 w-4 text-primary mr-2 flex-shrink-0" />;
     if (lowerFeature.includes("event") || lowerFeature.includes("workshop"))
-      return <Calendar className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
+      return <Calendar className="h-4 w-4 text-primary mr-2 flex-shrink-0" />;
 
     // Default icon
-    return <CheckCircle2 className="h-4 w-4 text-primary mr-2 flex-shrink-0" />
-  }
+    return <CheckCircle2 className="h-4 w-4 text-primary mr-2 flex-shrink-0" />;
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-muted/20">
@@ -429,52 +481,87 @@ export default function ProfilePage() {
                             <Clock className="h-5 w-5 text-amber-600" />
                             <CardTitle>Pending Package</CardTitle>
                           </div>
-                          <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-100">
+                          <Badge
+                            variant="outline"
+                            className="border-amber-500 text-amber-700 bg-amber-100"
+                          >
                             Awaiting Payment
                           </Badge>
                         </div>
-                        <CardDescription>Your selected package is waiting for payment confirmation</CardDescription>
+                        <CardDescription>
+                          Your selected package is waiting for payment
+                          confirmation
+                        </CardDescription>
                       </CardHeader>
 
                       <CardContent className="pt-2">
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
-                          <h3 className="font-semibold text-lg mb-2">{pendingPackage.package_details?.name}</h3>
-                          <p className="text-muted-foreground mb-4">{pendingPackage.package_details?.description}</p>
+                          <h3 className="font-semibold text-lg mb-2">
+                            {pendingPackage.package_details?.name}
+                          </h3>
+                          <p className="text-muted-foreground mb-4">
+                            {pendingPackage.package_details?.description}
+                          </p>
 
                           <div className="flex justify-between items-center mb-4">
                             <span className="text-2xl font-bold text-primary">
-                              ฿{pendingPackage.package_details?.price.toFixed(2)}
+                              ฿
+                              {pendingPackage.package_details?.price.toFixed(2)}
                             </span>
                             <span className="text-sm text-muted-foreground">
-                              {pendingPackage.package_details?.duration_days} days
+                              {pendingPackage.package_details?.duration_days}{" "}
+                              days
                             </span>
                           </div>
 
                           <div className="space-y-2">
                             <h4 className="font-medium">Package Features:</h4>
                             <ul className="space-y-1">
-                              {pendingPackage.package_details?.features.map((feature, index) => (
-                                <li key={index} className="flex items-start text-sm">
-                                  <CheckCircle2 className="h-4 w-4 text-primary mr-2 mt-0.5 flex-shrink-0" />
-                                  <span>{feature}</span>
-                                </li>
-                              ))}
+                              {pendingPackage.package_details?.features.map(
+                                (feature, index) => (
+                                  <li
+                                    key={index}
+                                    className="flex items-start text-sm"
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                  </li>
+                                )
+                              )}
                             </ul>
                           </div>
 
-                          <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                            <div className="flex items-start">
-                              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                                  Payment Required
-                                </p>
-                                <p className="text-xs text-amber-700 dark:text-amber-400">
-                                  Please visit the counter to complete your payment and activate this package.
-                                </p>
+                          {pendingPackage.payment_method === "cash" ? (
+                            <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                              <div className="flex items-start">
+                                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                    Payment Required
+                                  </p>
+                                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                                    Please visit the counter to complete your
+                                    payment and activate this package.
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                              <div className="flex items-start">
+                                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                                    Payment Pending
+                                  </p>
+                                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                                    Waiting for payment confirmation. Please
+                                    wait admin will be check your payment slip.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -497,12 +584,18 @@ export default function ProfilePage() {
                           </div>
                           <Badge
                             variant={isPackageConfirmed ? "default" : "outline"}
-                            className={isPackageConfirmed ? "" : "border-amber-500 text-amber-500"}
+                            className={
+                              isPackageConfirmed
+                                ? ""
+                                : "border-amber-500 text-amber-500"
+                            }
                           >
                             {isPackageConfirmed ? "Active" : "Pending Payment"}
                           </Badge>
                         </div>
-                        <CardDescription>Your digital membership details</CardDescription>
+                        <CardDescription>
+                          Your digital membership details
+                        </CardDescription>
                       </CardHeader>
 
                       <CardContent className="pt-2">
@@ -513,14 +606,22 @@ export default function ProfilePage() {
                               name: member.name,
                               email: member.email,
                               profile_picture_url:
-                                profilePictureUrl && profilePictureUrl.trim() !== "" ? profilePictureUrl : undefined,
+                                profilePictureUrl &&
+                                profilePictureUrl.trim() !== ""
+                                  ? profilePictureUrl
+                                  : undefined,
                             }}
                             memberPackage={memberPackage}
                             showDetails={false}
                             isEdit={true}
-                            handleProfilePictureUploaded={handleProfilePictureUploaded}
+                            handleProfilePictureUploaded={
+                              handleProfilePictureUploaded
+                            }
                             profilePictureUrl={
-                              profilePictureUrl && profilePictureUrl.trim() !== "" ? profilePictureUrl : ""
+                              profilePictureUrl &&
+                              profilePictureUrl.trim() !== ""
+                                ? profilePictureUrl
+                                : ""
                             }
                           />
                         </div>
@@ -529,13 +630,31 @@ export default function ProfilePage() {
                         {isPackageConfirmed && (
                           <div className="mt-6 space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Package Period</span>
-                              <span className="font-medium">{Math.round(100 - membershipProgress)}% remaining</span>
+                              <span className="text-muted-foreground">
+                                Package Period
+                              </span>
+                              <span className="font-medium">
+                                {Math.round(100 - membershipProgress)}%
+                                remaining
+                              </span>
                             </div>
-                            <Progress value={membershipProgress} className="h-2" />
+                            <Progress
+                              value={membershipProgress}
+                              className="h-2"
+                            />
                             <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>{format(new Date(memberPackage.start_date), "MMM d, yyyy")}</span>
-                              <span>{format(new Date(memberPackage.end_date), "MMM d, yyyy")}</span>
+                              <span>
+                                {format(
+                                  new Date(memberPackage.start_date),
+                                  "MMM d, yyyy"
+                                )}
+                              </span>
+                              <span>
+                                {format(
+                                  new Date(memberPackage.end_date),
+                                  "MMM d, yyyy"
+                                )}
+                              </span>
                             </div>
                           </div>
                         )}
@@ -545,10 +664,13 @@ export default function ProfilePage() {
                           <div className="bg-muted/50 rounded-lg p-4 transition-colors hover:bg-muted/70">
                             <div className="flex items-center gap-2 mb-2">
                               <Package className="h-4 w-4 text-primary" />
-                              <h3 className="font-medium">{memberPackage.package_details.name}</h3>
+                              <h3 className="font-medium">
+                                {memberPackage.package_details.name}
+                              </h3>
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-2">
-                              {memberPackage.package_details.description || "Standard membership package"}
+                              {memberPackage.package_details.description ||
+                                "Standard membership package"}
                             </p>
                           </div>
 
@@ -558,15 +680,24 @@ export default function ProfilePage() {
                               <h3 className="font-medium">Payment Details</h3>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-muted-foreground">Amount:</span>
+                              <span className="text-sm text-muted-foreground">
+                                Amount:
+                              </span>
                               <span className="text-sm font-medium">
-                                ฿{memberPackage.package_details.price.toFixed(2)}
+                                ฿
+                                {memberPackage.package_details.price.toFixed(2)}
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-muted-foreground">Status:</span>
+                              <span className="text-sm text-muted-foreground">
+                                Status:
+                              </span>
                               <span
-                                className={`text-sm font-medium ${isPackageConfirmed ? "text-green-600" : "text-amber-600"}`}
+                                className={`text-sm font-medium ${
+                                  isPackageConfirmed
+                                    ? "text-green-600"
+                                    : "text-amber-600"
+                                }`}
                               >
                                 {isPackageConfirmed ? "Paid" : "Pending"}
                               </span>
@@ -581,15 +712,17 @@ export default function ProfilePage() {
                             Package Features
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {memberPackage.package_details.features.map((feature, index) => (
-                              <div
-                                key={index}
-                                className="flex items-start p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
-                              >
-                                {getFeatureIcon(feature)}
-                                <span className="text-sm">{feature}</span>
-                              </div>
-                            ))}
+                            {memberPackage.package_details.features.map(
+                              (feature, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-start p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
+                                >
+                                  {getFeatureIcon(feature)}
+                                  <span className="text-sm">{feature}</span>
+                                </div>
+                              )
+                            )}
                           </div>
                         </div>
 
@@ -612,7 +745,8 @@ export default function ProfilePage() {
                                     Payment Pending
                                   </p>
                                   <p className="text-xs text-amber-700 dark:text-amber-400">
-                                    Please visit the counter to complete your payment and activate your membership.
+                                    Please visit the counter to complete your
+                                    payment and activate your membership.
                                   </p>
                                 </div>
                               </div>
@@ -638,11 +772,16 @@ export default function ProfilePage() {
                             <Package className="h-5 w-5 text-blue-600" />
                             <CardTitle>Package Upgrade Request</CardTitle>
                           </div>
-                          <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-100">
+                          <Badge
+                            variant="outline"
+                            className="border-blue-500 text-blue-700 bg-blue-100"
+                          >
                             Pending Admin Approval
                           </Badge>
                         </div>
-                        <CardDescription>Your package upgrade is waiting for admin confirmation</CardDescription>
+                        <CardDescription>
+                          Your package upgrade is waiting for admin confirmation
+                        </CardDescription>
                       </CardHeader>
 
                       <CardContent className="pt-2">
@@ -651,22 +790,35 @@ export default function ProfilePage() {
                           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                             <div className="flex items-center gap-2 mb-3">
                               <Award className="h-4 w-4 text-gray-600" />
-                              <h3 className="font-medium text-gray-700 dark:text-gray-300">Current Package</h3>
+                              <h3 className="font-medium text-gray-700 dark:text-gray-300">
+                                Current Package
+                              </h3>
                             </div>
-                            <h4 className="font-semibold text-lg mb-2">{memberPackage.package_details?.name}</h4>
+                            <h4 className="font-semibold text-lg mb-2">
+                              {memberPackage.package_details?.name}
+                            </h4>
                             <div className="text-xl font-bold text-gray-600 mb-3">
                               ฿{memberPackage.package_details?.price.toFixed(2)}
                             </div>
                             <div className="space-y-1">
-                              {memberPackage.package_details?.features.slice(0, 3).map((feature, index) => (
-                                <div key={index} className="flex items-start text-sm text-gray-600">
-                                  <CheckCircle2 className="h-3 w-3 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
-                                  <span>{feature}</span>
-                                </div>
-                              ))}
-                              {memberPackage.package_details?.features.length > 3 && (
+                              {memberPackage.package_details?.features
+                                .slice(0, 3)
+                                .map((feature, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-start text-sm text-gray-600"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                  </div>
+                                ))}
+                              {memberPackage.package_details?.features.length >
+                                3 && (
                                 <div className="text-xs text-gray-500">
-                                  +{memberPackage.package_details.features.length - 3} more features
+                                  +
+                                  {memberPackage.package_details.features
+                                    .length - 3}{" "}
+                                  more features
                                 </div>
                               )}
                             </div>
@@ -675,26 +827,42 @@ export default function ProfilePage() {
                           {/* Upgrade Package */}
                           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/50 dark:to-blue-800/50 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-700 relative">
                             <div className="absolute top-2 right-2">
-                              <Badge className="bg-blue-600 text-white">Upgrade</Badge>
+                              <Badge className="bg-blue-600 text-white">
+                                Upgrade
+                              </Badge>
                             </div>
                             <div className="flex items-center gap-2 mb-3">
                               <Sparkles className="h-4 w-4 text-blue-600" />
-                              <h3 className="font-medium text-blue-700 dark:text-blue-300">New Package</h3>
+                              <h3 className="font-medium text-blue-700 dark:text-blue-300">
+                                New Package
+                              </h3>
                             </div>
-                            <h4 className="font-semibold text-lg mb-2">{upgradePackage.package_details?.name}</h4>
+                            <h4 className="font-semibold text-lg mb-2">
+                              {upgradePackage.package_details?.name}
+                            </h4>
                             <div className="text-xl font-bold text-blue-600 mb-3">
-                              ฿{upgradePackage.package_details?.price.toFixed(2)}
+                              ฿
+                              {upgradePackage.package_details?.price.toFixed(2)}
                             </div>
                             <div className="space-y-1">
-                              {upgradePackage.package_details?.features.slice(0, 3).map((feature, index) => (
-                                <div key={index} className="flex items-start text-sm text-blue-700 dark:text-blue-300">
-                                  <CheckCircle2 className="h-3 w-3 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
-                                  <span>{feature}</span>
-                                </div>
-                              ))}
-                              {upgradePackage.package_details?.features.length > 3 && (
+                              {upgradePackage.package_details?.features
+                                .slice(0, 3)
+                                .map((feature, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-start text-sm text-blue-700 dark:text-blue-300"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                  </div>
+                                ))}
+                              {upgradePackage.package_details?.features.length >
+                                3 && (
                                 <div className="text-xs text-blue-600">
-                                  +{upgradePackage.package_details.features.length - 3} more features
+                                  +
+                                  {upgradePackage.package_details.features
+                                    .length - 3}{" "}
+                                  more features
                                 </div>
                               )}
                             </div>
@@ -709,27 +877,44 @@ export default function ProfilePage() {
                           </h4>
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-muted-foreground">Price Difference:</span>
+                              <span className="text-muted-foreground">
+                                Price Difference:
+                              </span>
                               <div className="font-semibold text-blue-600">
                                 +฿
-                                {(upgradePackage.package_details?.price - memberPackage.package_details?.price).toFixed(
-                                  2,
+                                {(
+                                  upgradePackage.package_details?.price -
+                                  memberPackage.package_details?.price
+                                ).toFixed(2)}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">
+                                Duration:
+                              </span>
+                              <div className="font-semibold">
+                                {upgradePackage.package_details?.duration_days}{" "}
+                                days
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">
+                                Requested:
+                              </span>
+                              <div className="font-semibold">
+                                {format(
+                                  new Date(upgradePackage.created_at),
+                                  "MMM d, yyyy"
                                 )}
                               </div>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Duration:</span>
-                              <div className="font-semibold">{upgradePackage.package_details?.duration_days} days</div>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Requested:</span>
-                              <div className="font-semibold">
-                                {format(new Date(upgradePackage.created_at), "MMM d, yyyy")}
+                              <span className="text-muted-foreground">
+                                Status:
+                              </span>
+                              <div className="font-semibold text-amber-600">
+                                Pending Approval
                               </div>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Status:</span>
-                              <div className="font-semibold text-amber-600">Pending Approval</div>
                             </div>
                           </div>
                         </div>
@@ -742,8 +927,9 @@ export default function ProfilePage() {
                                 Upgrade Request Submitted
                               </p>
                               <p className="text-xs text-blue-700 dark:text-blue-400">
-                                Your upgrade request has been submitted to admin for review. You will be notified once
-                                it's approved and ready for payment.
+                                Your upgrade request has been submitted to admin
+                                for review. You will be notified once it's
+                                approved and ready for payment.
                               </p>
                             </div>
                           </div>
@@ -766,7 +952,9 @@ export default function ProfilePage() {
                           <Wifi className="h-5 w-5 text-primary" />
                           <CardTitle>WiFi Access</CardTitle>
                         </div>
-                        <CardDescription>Your WiFi credentials for internet access</CardDescription>
+                        <CardDescription>
+                          Your WiFi credentials for internet access
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-4">
                         <div className="grid md:grid-cols-2 gap-4">
@@ -781,12 +969,16 @@ export default function ProfilePage() {
                             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg -z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
                             <p className="text-sm font-medium mb-1">Password</p>
                             <div className="relative font-mono bg-muted/50 p-3 rounded-lg border border-border/50 text-sm group-hover:border-primary/30 transition-colors">
-                              {showWifiPassword ? memberPackage.wifi_credentials.password : "••••••••••••"}
+                              {showWifiPassword
+                                ? memberPackage.wifi_credentials.password
+                                : "••••••••••••"}
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                                onClick={() => setShowWifiPassword(!showWifiPassword)}
+                                onClick={() =>
+                                  setShowWifiPassword(!showWifiPassword)
+                                }
                               >
                                 {showWifiPassword ? "Hide" : "Show"}
                               </Button>
@@ -795,13 +987,13 @@ export default function ProfilePage() {
                         </div>
                         <p className="text-xs text-muted-foreground mt-4 flex items-center">
                           <Shield className="h-3 w-3 mr-1 text-muted-foreground/70" />
-                          Please keep your WiFi credentials secure and do not share them with others.
+                          Please keep your WiFi credentials secure and do not
+                          share them with others.
                         </p>
                       </CardContent>
                     </Card>
                   </motion.div>
                 )}
-
                 {/* No Membership Package Section */}
                 {!memberPackage && !pendingPackage && (
                   <motion.div
@@ -812,8 +1004,13 @@ export default function ProfilePage() {
                     <Card className="border-0 shadow-lg overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background -z-10" />
                       <CardHeader className="text-center pb-2">
-                        <CardTitle className="text-2xl">Discover Our Membership Packages</CardTitle>
-                        <CardDescription>Select a package to access exclusive benefits and services</CardDescription>
+                        <CardTitle className="text-2xl">
+                          Discover Our Membership Packages
+                        </CardTitle>
+                        <CardDescription>
+                          Select a package to access exclusive benefits and
+                          services
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="text-center py-8">
                         <div className="relative w-24 h-24 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
@@ -822,7 +1019,9 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="max-w-md mx-auto mb-8">
-                          <h3 className="text-xl font-medium mb-2">Benefits of Membership</h3>
+                          <h3 className="text-xl font-medium mb-2">
+                            Benefits of Membership
+                          </h3>
                           <ul className="space-y-2 text-left">
                             <li className="flex items-center">
                               <CheckCircle2 className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
@@ -883,38 +1082,53 @@ export default function ProfilePage() {
                           </div>
 
                           <div className="space-y-1">
-                            <div className="text-sm font-medium">Email Address</div>
+                            <div className="text-sm font-medium">
+                              Email Address
+                            </div>
                             <div className="flex items-center gap-2 p-2">
                               <Mail className="h-4 w-4 text-muted-foreground" />
-                              <div className="font-medium text-sm">{member.email}</div>
+                              <div className="font-medium text-sm">
+                                {member.email}
+                              </div>
                             </div>
                           </div>
 
                           <Separator />
 
                           <div className="space-y-1">
-                            <div className="text-sm font-medium">Account Status</div>
+                            <div className="text-sm font-medium">
+                              Account Status
+                            </div>
                             <div className="flex items-center gap-2 p-2">
                               {member.verified ? (
                                 <>
                                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                  <span className="text-green-600 font-medium text-sm">Verified</span>
+                                  <span className="text-green-600 font-medium text-sm">
+                                    Verified
+                                  </span>
                                 </>
                               ) : (
                                 <>
                                   <AlertCircle className="h-4 w-4 text-amber-600" />
-                                  <span className="text-amber-600 font-medium text-sm">Pending Verification</span>
+                                  <span className="text-amber-600 font-medium text-sm">
+                                    Pending Verification
+                                  </span>
                                 </>
                               )}
                             </div>
                           </div>
 
                           <div className="space-y-1">
-                            <div className="text-sm font-medium">Member Since</div>
+                            <div className="text-sm font-medium">
+                              Member Since
+                            </div>
                             <div className="flex items-center gap-2 p-2">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
                               <div className="font-medium text-sm">
-                                {format(new Date(member.created_at), "MMMM d, yyyy")}
+                                {format(
+                                  new Date(member.created_at),
+                                  "MMMM d, yyyy"
+                                )}
                               </div>
                             </div>
                           </div>
@@ -937,11 +1151,16 @@ export default function ProfilePage() {
                         <Edit className="h-5 w-5 text-primary" />
                         <CardTitle>Edit Profile</CardTitle>
                       </div>
-                      <CardDescription>Update your personal information</CardDescription>
+                      <CardDescription>
+                        Update your personal information
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-4">
                       <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <form
+                          onSubmit={form.handleSubmit(onSubmit)}
+                          className="space-y-4"
+                        >
                           <FormField
                             control={form.control}
                             name="name"
@@ -981,7 +1200,9 @@ export default function ProfilePage() {
                                     />
                                   </div>
                                 </FormControl>
-                                <FormDescription>Email address cannot be changed</FormDescription>
+                                <FormDescription>
+                                  Email address cannot be changed
+                                </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -1008,7 +1229,11 @@ export default function ProfilePage() {
                             )}
                           />
 
-                          <Button type="submit" disabled={isSaving} className="w-full group">
+                          <Button
+                            type="submit"
+                            disabled={isSaving}
+                            className="w-full group"
+                          >
                             {isSaving ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1039,7 +1264,9 @@ export default function ProfilePage() {
                         <AlertCircle className="h-5 w-5 text-primary" />
                         <CardTitle>Test Notifications</CardTitle>
                       </div>
-                      <CardDescription>Test the notification system</CardDescription>
+                      <CardDescription>
+                        Test the notification system
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-4">
                       <TestUserNotificationButton />
@@ -1052,5 +1279,5 @@ export default function ProfilePage() {
         )}
       </main>
     </div>
-  )
+  );
 }

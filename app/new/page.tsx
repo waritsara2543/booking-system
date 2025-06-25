@@ -1,25 +1,49 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { format, addDays, startOfDay } from "date-fns"
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { cn } from "@/lib/utils"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { AlertCircle, CalendarIcon, ArrowLeft, ChevronDown } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { getSupabase, getRooms, isMember, getTimeSlotAvailable } from "@/lib/supabase"
-import type { Room } from "@/types/booking"
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { format, addDays, startOfDay } from "date-fns";
+import { Header } from "@/components/header";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  AlertCircle,
+  CalendarIcon,
+  ArrowLeft,
+  ChevronDown,
+  Pencil,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  getSupabase,
+  getRooms,
+  isMember,
+  getTimeSlotAvailable,
+} from "@/lib/supabase";
+import type { Room } from "@/types/booking";
 import {
   Dialog,
   DialogContent,
@@ -27,51 +51,52 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog"
-import Link from "next/link"
-import { z } from "zod"
-import { checkAuthStatus } from "@/lib/auth-utils"
+} from "@/components/ui/dialog";
+import Link from "next/link";
+import { z } from "zod";
+import { checkAuthStatus } from "@/lib/auth-utils";
+import Image from "next/image";
 
 // Import custom components
-import { RoomSelectionGrid } from "@/components/room-selection-grid"
-import { RoomDetailsCard } from "@/components/room-details-card"
-import { AuthDialog } from "@/components/auth-dialog"
-import { AuthGuard } from "@/components/auth-guard"
+import { RoomSelectionGrid } from "@/components/room-selection-grid";
+import { RoomDetailsCard } from "@/components/room-details-card";
+import { AuthDialog } from "@/components/auth-dialog";
+import { AuthGuard } from "@/components/auth-guard";
 
 // Function to fetch member details by member ID
 async function fetchMemberDetails(memberId: string) {
-  const supabase = getSupabase()
+  const supabase = getSupabase();
   try {
     const { data, error } = await supabase
       .from("members")
       .select("name, email, phone")
       .eq("member_id", memberId)
-      .single()
+      .single();
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("Error fetching member details:", error)
-    return null
+    console.error("Error fetching member details:", error);
+    return null;
   }
 }
 
 // Function to check if user has pending bookings
 async function checkPendingBookings(memberId: string) {
-  const supabase = getSupabase()
+  const supabase = getSupabase();
   try {
     const { data, error } = await supabase
       .from("room_bookings")
       .select("id")
       .eq("member_id", memberId)
       .eq("status", "pending")
-      .limit(1)
+      .limit(1);
 
-    if (error) throw error
-    return data && data.length > 0
+    if (error) throw error;
+    return data && data.length > 0;
   } catch (error) {
-    console.error("Error checking pending bookings:", error)
-    return false
+    console.error("Error checking pending bookings:", error);
+    return false;
   }
 }
 
@@ -101,23 +126,25 @@ const formSchema = z
   })
   .refine(
     (data) => {
-      return true
+      return true;
     },
     {
       message: "End time must be after start time",
       path: ["endTime"],
-    },
-  )
+    }
+  );
 
 function NewBookingPageContent() {
-  const router = useRouter()
+  const router = useRouter();
 
   // State for rooms and selection
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [showAuthDialog, setShowAuthDialog] = useState(false)
-  const [pendingRoomSelection, setPendingRoomSelection] = useState<Room | null>(null)
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [pendingRoomSelection, setPendingRoomSelection] = useState<Room | null>(
+    null
+  );
 
   // Form state
   const [formData, setFormData] = useState({
@@ -130,69 +157,78 @@ function NewBookingPageContent() {
     notes: "",
     paymentMethod: "cash",
     type: "regular", // Add this new field with default value
-  })
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Date and time selection state
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
-  const [startTime, setStartTime] = useState<string>("")
-  const [endTime, setEndTime] = useState<string>("")
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
 
   // Other state
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [memberVerified, setMemberVerified] = useState<boolean | null>(null)
-  const [showMemberWarning, setShowMemberWarning] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [bookingDetails, setBookingDetails] = useState<any>(null)
-  const [debugInfo, setDebugInfo] = useState<string | null>(null)
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [memberVerified, setMemberVerified] = useState<boolean | null>(null);
+  const [showMemberWarning, setShowMemberWarning] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [startTimeOptions, setStartTimeOption] = useState<
     {
-      startTime: string
-      enabled: boolean
+      startTime: string;
+      enabled: boolean;
     }[]
-  >([])
-  const [endTimeOptions, setEndTimeOption] = useState<{ endTime: string; enabled: boolean }[]>([])
-  const [existingBookings, setExistingBookings] = useState<{ start_time: string; end_time: string }[]>([])
-  const [validEndTimes, setValidEndTimes] = useState<string[]>([])
-  const [memberFieldsReadOnly, setMemberFieldsReadOnly] = useState(false)
-  const [datePickerOpen, setDatePickerOpen] = useState(false)
-  const [hasPendingBooking, setHasPendingBooking] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
+  >([]);
+  const [endTimeOptions, setEndTimeOption] = useState<
+    { endTime: string; enabled: boolean }[]
+  >([]);
+  const [existingBookings, setExistingBookings] = useState<
+    { start_time: string; end_time: string }[]
+  >([]);
+  const [validEndTimes, setValidEndTimes] = useState<string[]>([]);
+  const [memberFieldsReadOnly, setMemberFieldsReadOnly] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [hasPendingBooking, setHasPendingBooking] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [previewURL, setPreviewURL] = useState<string | null>(null);
 
   // Load rooms on component mount
   useEffect(() => {
     async function loadRooms() {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const roomsData = await getRooms()
-        setRooms(roomsData)
+        const roomsData = await getRooms();
+        setRooms(roomsData);
       } catch (error) {
-        console.error("Error loading rooms:", error)
-        toast.error("Failed to load meeting rooms")
+        console.error("Error loading rooms:", error);
+        toast.error("Failed to load meeting rooms");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    loadRooms()
+    loadRooms();
 
     // ตรวจสอบสถานะการล็อกอินโดยใช้ฟังก์ชันใหม่
-    const { isLoggedIn: loggedIn, isAdmin: admin, memberId } = checkAuthStatus()
+    const {
+      isLoggedIn: loggedIn,
+      isAdmin: admin,
+      memberId,
+    } = checkAuthStatus();
 
-    console.log("New Booking - Auth status:", { loggedIn, admin, memberId })
+    console.log("New Booking - Auth status:", { loggedIn, admin, memberId });
 
-    setIsLoggedIn(loggedIn)
-    setIsAdmin(admin)
+    setIsLoggedIn(loggedIn);
+    setIsAdmin(admin);
 
     // ถ้าล็อกอินแล้ว ดึงข้อมูลจาก localStorage
     if (loggedIn && !admin && memberId) {
       try {
-        const memberName = localStorage.getItem("memberName")
-        const memberEmail = localStorage.getItem("memberEmail")
-        const memberPhone = localStorage.getItem("memberPhone")
+        const memberName = localStorage.getItem("memberName");
+        const memberEmail = localStorage.getItem("memberEmail");
+        const memberPhone = localStorage.getItem("memberPhone");
 
         if (memberId && memberName && memberEmail) {
           setFormData((prev) => ({
@@ -201,163 +237,173 @@ function NewBookingPageContent() {
             name: memberName,
             email: memberEmail,
             phone: memberPhone || prev.phone,
-          }))
-          setMemberVerified(true)
-          setMemberFieldsReadOnly(true)
+          }));
+          setMemberVerified(true);
+          setMemberFieldsReadOnly(true);
 
           // ตรวจสอบว่าผู้ใช้มีการจองที่รอการยืนยันหรือไม่
           checkPendingBookings(memberId).then((hasPending) => {
-            setHasPendingBooking(hasPending)
-          })
+            setHasPendingBooking(hasPending);
+          });
         }
       } catch (error) {
-        console.error("Error accessing localStorage:", error)
+        console.error("Error accessing localStorage:", error);
       }
     }
-  }, [])
+  }, []);
 
   // Handle room selection
   const handleRoomSelect = (room: Room) => {
     // Check if user is logged in
     if (!isLoggedIn && !isAdmin) {
-      setPendingRoomSelection(room)
-      setShowAuthDialog(true)
-      return
+      setPendingRoomSelection(room);
+      setShowAuthDialog(true);
+      return;
     }
 
     // Check if user has pending bookings
     if (hasPendingBooking) {
-      toast.error("You already have a pending booking. Please wait for confirmation before making another booking.")
-      return
+      toast.error(
+        "You already have a pending booking. Please wait for confirmation before making another booking."
+      );
+      return;
     }
 
-    setSelectedRoom(room)
+    setSelectedRoom(room);
 
     // Set default date if not already set
     if (!selectedDate) {
-      const tomorrow = addDays(new Date(), 1)
-      setSelectedDate(tomorrow)
+      const tomorrow = addDays(new Date(), 1);
+      setSelectedDate(tomorrow);
     }
 
     // Reset time selections
-    setStartTime("")
-    setEndTime("")
-  }
+    setStartTime("");
+    setEndTime("");
+  };
 
   // Handle auth dialog close
   const handleAuthDialogClose = () => {
-    setShowAuthDialog(false)
-    setPendingRoomSelection(null)
-  }
+    setShowAuthDialog(false);
+    setPendingRoomSelection(null);
+  };
 
   // Load time slots when date or room changes
   useEffect(() => {
     async function getTime() {
-      if (!selectedDate || !selectedRoom) return
+      if (!selectedDate || !selectedRoom) return;
 
-      const formattedDate = format(selectedDate, "yyyy-MM-dd")
-      const roomId = selectedRoom.id
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      const roomId = selectedRoom.id;
 
-      setIsCheckingAvailability(true)
+      setIsCheckingAvailability(true);
 
       try {
         // Get existing bookings for this room and date
-        const supabase = getSupabase()
+        const supabase = getSupabase();
         const { data, error } = await supabase
           .from("room_bookings")
           .select("start_time, end_time")
           .eq("room_id", roomId)
           .eq("date", formattedDate)
-          .neq("status", "cancelled")
+          .neq("status", "cancelled");
 
         if (error) {
-          console.error("Error fetching existing bookings:", error)
-          toast.error("Failed to check room availability")
-          return
+          console.error("Error fetching existing bookings:", error);
+          toast.error("Failed to check room availability");
+          return;
         }
 
-        setExistingBookings(data || [])
+        setExistingBookings(data || []);
 
         // Get available time slots
-        const result = await getTimeSlotAvailable(roomId, formattedDate)
+        const result = await getTimeSlotAvailable(roomId, formattedDate);
 
         // If booking for today, filter out past times
-        const isToday = format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
+        const isToday =
+          format(selectedDate, "yyyy-MM-dd") ===
+          format(new Date(), "yyyy-MM-dd");
 
         if (isToday) {
-          const currentTime = new Date()
-          const currentHour = currentTime.getHours()
-          const currentMinute = currentTime.getMinutes()
+          const currentTime = new Date();
+          const currentHour = currentTime.getHours();
+          const currentMinute = currentTime.getMinutes();
 
           // Format current time as HH:MM for comparison
-          const currentTimeString = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`
+          const currentTimeString = `${currentHour
+            .toString()
+            .padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}`;
 
           // Filter start times that are in the future
-          const filteredStartTimeOptions = result.startTimeOptions.map((option) => ({
-            ...option,
-            enabled: option.enabled && option.startTime > currentTimeString,
-          }))
+          const filteredStartTimeOptions = result.startTimeOptions.map(
+            (option) => ({
+              ...option,
+              enabled: option.enabled && option.startTime > currentTimeString,
+            })
+          );
 
-          setStartTimeOption(filteredStartTimeOptions)
+          setStartTimeOption(filteredStartTimeOptions);
         } else {
-          setStartTimeOption(result.startTimeOptions)
+          setStartTimeOption(result.startTimeOptions);
         }
 
-        setEndTimeOption(result.endTimeOptions)
+        setEndTimeOption(result.endTimeOptions);
       } catch (error) {
-        console.error("Error checking availability:", error)
-        toast.error("Failed to check room availability")
+        console.error("Error checking availability:", error);
+        toast.error("Failed to check room availability");
       } finally {
-        setIsCheckingAvailability(false)
+        setIsCheckingAvailability(false);
       }
     }
 
     if (selectedRoom && selectedDate) {
-      getTime()
+      getTime();
     }
-  }, [selectedRoom, selectedDate])
+  }, [selectedRoom, selectedDate]);
 
   // Update valid end times when start time changes
   useEffect(() => {
     if (!startTime) {
-      setValidEndTimes([])
-      return
+      setValidEndTimes([]);
+      return;
     }
 
     // Filter end times that are after the selected start time
-    const validTimes = endTimeOptions.filter((option) => option.endTime > startTime).map((option) => option.endTime)
+    const validTimes = endTimeOptions
+      .filter((option) => option.endTime > startTime)
+      .map((option) => option.endTime);
 
     // Check for overlapping bookings
     const filteredTimes = validTimes.filter((endTime) => {
       // Check if booking with this start and end time would overlap with any existing booking
       return !existingBookings.some((booking) => {
         // Skip if the booking starts at or after our end time
-        if (booking.start_time >= endTime) return false
+        if (booking.start_time >= endTime) return false;
 
         // Skip if the booking ends at or before our start time
-        if (booking.end_time <= startTime) return false
+        if (booking.end_time <= startTime) return false;
 
         // Otherwise, there's an overlap
-        return true
-      })
-    })
+        return true;
+      });
+    });
 
-    setValidEndTimes(filteredTimes)
+    setValidEndTimes(filteredTimes);
 
     // If current end time is invalid, reset it
     if (endTime && !filteredTimes.includes(endTime)) {
-      setEndTime("")
+      setEndTime("");
     }
-  }, [startTime, endTimeOptions, existingBookings])
+  }, [startTime, endTimeOptions, existingBookings]);
 
   // Fetch member details when member ID changes
   useEffect(() => {
     async function getMemberDetails() {
-      const memberId = formData.memberId
+      const memberId = formData.memberId;
 
       if (memberId && memberId.length === 7) {
-        const supabase = getSupabase()
-        const memberDetails = await fetchMemberDetails(memberId)
+        const supabase = getSupabase();
+        const memberDetails = await fetchMemberDetails(memberId);
 
         if (memberDetails) {
           // Update form with member details
@@ -367,9 +413,9 @@ function NewBookingPageContent() {
             name: memberDetails.name,
             email: memberDetails.email,
             phone: memberDetails.phone || "",
-          }))
-          setMemberVerified(true)
-          setMemberFieldsReadOnly(true) // Make fields read-only when member details are retrieved
+          }));
+          setMemberVerified(true);
+          setMemberFieldsReadOnly(true); // Make fields read-only when member details are retrieved
         } else {
           // Reset fields if member not found and they're currently read-only
           if (memberFieldsReadOnly) {
@@ -378,10 +424,10 @@ function NewBookingPageContent() {
               name: "",
               email: "",
               phone: "",
-            }))
-            setMemberFieldsReadOnly(false)
+            }));
+            setMemberFieldsReadOnly(false);
           }
-          setMemberVerified(false)
+          setMemberVerified(false);
         }
       } else if (memberId === "" && memberFieldsReadOnly) {
         // Reset fields if member ID is cleared and fields are read-only
@@ -390,219 +436,243 @@ function NewBookingPageContent() {
           name: "",
           email: "",
           phone: "",
-        }))
-        setMemberFieldsReadOnly(false)
-        setMemberVerified(null)
+        }));
+        setMemberFieldsReadOnly(false);
+        setMemberVerified(null);
       }
     }
 
-    getMemberDetails()
-  }, [formData.memberId, memberFieldsReadOnly])
+    getMemberDetails();
+  }, [formData.memberId, memberFieldsReadOnly]);
 
   // Verify member ID when it changes
   useEffect(() => {
     async function verifyMember() {
-      const memberId = formData.memberId
+      const memberId = formData.memberId;
 
       if (memberId) {
-        const verified = await isMember(memberId)
-        setMemberVerified(verified)
-        setShowMemberWarning(!verified)
+        const verified = await isMember(memberId);
+        setMemberVerified(verified);
+        setShowMemberWarning(!verified);
       } else {
-        setMemberVerified(null)
-        setShowMemberWarning(false)
+        setMemberVerified(null);
+        setShowMemberWarning(false);
       }
     }
 
-    verifyMember()
-  }, [formData.memberId])
+    verifyMember();
+  }, [formData.memberId]);
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
+      const file = e.target.files[0];
       if (file.size > 5 * 1024 * 1024) {
         // 5MB limit
-        alert("File size exceeds 5MB limit")
-        toast.error("File size exceeds 5MB limit")
-        return
+        alert("File size exceeds 5MB limit");
+        toast.error("File size exceeds 5MB limit");
+        return;
       }
-      setSelectedFile(file)
+      setSelectedFile(file);
+      setPreviewURL(URL.createObjectURL(file));
     }
-  }
+  };
 
   // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
+    }));
 
     // Clear error for this field if it exists
     if (formErrors[name]) {
       setFormErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[name]
-        return newErrors
-      })
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
-  }
+  };
 
   // Format dates for display
   const formatSelectedDate = (date: Date | null) => {
-    if (!date) return "No date selected"
-    return format(date, "PPP")
-  }
+    if (!date) return "No date selected";
+    return format(date, "PPP");
+  };
 
   // Get today and tomorrow for date validation
-  const today = startOfDay(new Date())
-  const tomorrow = startOfDay(addDays(today, 1))
+  const today = startOfDay(new Date());
+  const tomorrow = startOfDay(addDays(today, 1));
 
   // Check if a booking would overlap with existing bookings
   const checkBookingOverlap = (startTime: string, endTime: string) => {
     return existingBookings.some((booking) => {
       // Skip if the booking starts at or after our end time
-      if (booking.start_time >= endTime) return false
+      if (booking.start_time >= endTime) return false;
 
       // Skip if the booking ends at or before our start time
-      if (booking.end_time <= startTime) return false
+      if (booking.end_time <= startTime) return false;
 
       // Otherwise, there's an overlap
-      return true
-    })
-  }
+      return true;
+    });
+  };
 
   // Reset room selection
   const handleBackToRooms = () => {
-    setSelectedRoom(null)
-    setStartTime("")
-    setEndTime("")
-  }
+    setSelectedRoom(null);
+    setStartTime("");
+    setEndTime("");
+  };
 
   // Validate form
   const validateForm = () => {
-    const errors: Record<string, string> = {}
+    const errors: Record<string, string> = {};
 
     // Validate required fields
     if (!formData.name || formData.name.length < 2) {
-      errors.name = "Name must be at least 2 characters."
+      errors.name = "Name must be at least 2 characters.";
     }
 
     if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
-      errors.email = "Please enter a valid email address."
+      errors.email = "Please enter a valid email address.";
     }
 
     if (!formData.phone || formData.phone.length < 5) {
-      errors.phone = "Please enter a valid phone number (minimum 5 digits)."
+      errors.phone = "Please enter a valid phone number (minimum 5 digits).";
     }
 
     if (!formData.purpose || formData.purpose.length < 2) {
-      errors.purpose = "Please enter the purpose of the meeting."
+      errors.purpose = "Please enter the purpose of the meeting.";
     }
 
     if (!selectedDate) {
-      errors.date = "Please select a booking date."
+      errors.date = "Please select a booking date.";
     }
 
     if (!startTime) {
-      errors.startTime = "Please select a start time."
+      errors.startTime = "Please select a start time.";
     }
 
     if (!endTime) {
-      errors.endTime = "Please select an end time."
+      errors.endTime = "Please select an end time.";
     }
 
     if (!formData.paymentMethod) {
-      errors.paymentMethod = "Please select a payment method."
+      errors.paymentMethod = "Please select a payment method.";
+    }
+
+    if (formData.paymentMethod === "bank_transfer" && selectedFile === null) {
+      errors.attachment = "Please upload a payment receipt for bank transfer.";
     }
 
     // Check if attendees is a valid number
-    const attendees = Number(formData.attendees)
+    const attendees = Number(formData.attendees);
     if (isNaN(attendees) || attendees < 1) {
-      errors.attendees = "Number of attendees must be at least 1."
+      errors.attendees = "Number of attendees must be at least 1.";
     }
 
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  console.log("errors:", formErrors); // Debug log
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the errors in the form")
-      return
+      toast.error("Please fix the errors in the form");
+      return;
     }
 
     if (hasPendingBooking && formData.memberId) {
-      toast.error("You already have a pending booking. Please wait for confirmation before making another booking.")
-      return
+      toast.error(
+        "You already have a pending booking. Please wait for confirmation before making another booking."
+      );
+      return;
     }
 
     if (!selectedRoom || !selectedDate) {
-      toast.error("Please select a room and date")
-      return
+      toast.error("Please select a room and date");
+      return;
     }
 
-    setIsSubmitting(true)
-    setDebugInfo(null)
+    setIsSubmitting(true);
+    setDebugInfo(null);
 
     try {
       // Format the selected date
-      const formattedDate = format(selectedDate, "yyyy-MM-dd")
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
 
       // Final check for booking overlap
       if (checkBookingOverlap(startTime, endTime)) {
-        throw new Error("This time slot overlaps with an existing booking. Please select a different time.")
+        throw new Error(
+          "This time slot overlaps with an existing booking. Please select a different time."
+        );
       }
 
       // Check if the time slot is available
-      const supabase = getSupabase()
+      const supabase = getSupabase();
 
       // Rest of the function remains the same...
-      let attachmentUrl = null
+      let attachmentUrl = null;
 
       // Upload attachment if selected
       if (selectedFile) {
         try {
-          const fileExt = selectedFile.name.split(".").pop()
-          const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
-          const filePath = `attachments/${fileName}`
+          const fileExt = selectedFile.name.split(".").pop();
+          const fileName = `${Math.random()
+            .toString(36)
+            .substring(2)}.${fileExt}`;
+          const filePath = `attachments/${fileName}`;
 
           // Ensure the booking-attachments bucket exists
-          const { data: buckets } = await supabase.storage.listBuckets()
-          if (!buckets?.some((bucket) => bucket.name === "booking-attachments")) {
+          const { data: buckets } = await supabase.storage.listBuckets();
+          if (
+            !buckets?.some((bucket) => bucket.name === "booking-attachments")
+          ) {
             await supabase.storage.createBucket("booking-attachments", {
               public: true,
-            })
-            console.log("Created booking-attachments bucket")
+            });
+            console.log("Created booking-attachments bucket");
           }
 
           // Upload file to Supabase storage
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("booking-attachments")
-            .upload(filePath, selectedFile, {
-              cacheControl: "3600",
-              upsert: true,
-            })
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage
+              .from("booking-attachments")
+              .upload(filePath, selectedFile, {
+                cacheControl: "3600",
+                upsert: true,
+              });
 
           if (uploadError) {
-            console.error("File upload error:", uploadError)
-            throw uploadError
+            console.error("File upload error:", uploadError);
+            throw uploadError;
           }
 
           // Get public URL of the uploaded file
           const {
             data: { publicUrl },
-          } = supabase.storage.from("booking-attachments").getPublicUrl(filePath)
+          } = supabase.storage
+            .from("booking-attachments")
+            .getPublicUrl(filePath);
 
           // Set attachment URL
-          attachmentUrl = publicUrl
+          attachmentUrl = publicUrl;
         } catch (error) {
-          console.error("File upload error:", error)
-          toast.error("Failed to upload attachment. Continuing without attachment.")
+          console.error("File upload error:", error);
+          toast.error(
+            "Failed to upload attachment. Continuing without attachment."
+          );
         }
       }
 
@@ -623,14 +693,17 @@ function NewBookingPageContent() {
         attachment_url: attachmentUrl,
         status: "pending",
         type: isAdmin ? formData.type : "regular", // Add this line
-      }
+      };
 
-      console.log("Submitting booking data:", bookingData) // Debug log
+      console.log("Submitting booking data:", bookingData); // Debug log
 
       // ใช้ API endpoint ที่ถูกต้อง
-      let result
+      let result;
       try {
-        console.log("Sending booking data to API:", JSON.stringify(bookingData))
+        console.log(
+          "Sending booking data to API:",
+          JSON.stringify(bookingData)
+        );
 
         const response = await fetch("/api/bookings/create", {
           method: "POST",
@@ -638,40 +711,44 @@ function NewBookingPageContent() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(bookingData),
-        })
+        });
 
-        console.log("API response status:", response.status, response.statusText)
+        console.log(
+          "API response status:",
+          response.status,
+          response.statusText
+        );
 
         if (!response.ok) {
           // ถ้า response ไม่สำเร็จ
-          let errorMessage = `Server error: ${response.status} ${response.statusText}`
+          let errorMessage = `Server error: ${response.status} ${response.statusText}`;
 
           try {
             // พยายามอ่านข้อความข้อผิดพลาดจาก response
-            const errorData = await response.json()
-            console.error("API error response:", errorData)
-            errorMessage = errorData.error || errorData.details || errorMessage
+            const errorData = await response.json();
+            console.error("API error response:", errorData);
+            errorMessage = errorData.error || errorData.details || errorMessage;
           } catch (parseError) {
             // ถ้าไม่สามารถอ่านเป็น JSON ได้ ให้อ่านเป็น text
             try {
-              const errorText = await response.text()
-              console.error("API error response (Text):", errorText)
-              errorMessage = errorText || errorMessage
+              const errorText = await response.text();
+              console.error("API error response (Text):", errorText);
+              errorMessage = errorText || errorMessage;
             } catch (textError) {
-              console.error("Could not parse error response:", textError)
+              console.error("Could not parse error response:", textError);
             }
           }
 
-          throw new Error(errorMessage)
+          throw new Error(errorMessage);
         }
 
         // อ่านข้อมูล response
         try {
-          result = await response.json()
-          console.log("API response data:", result)
+          result = await response.json();
+          console.log("API response data:", result);
 
           if (!result || !result.success) {
-            throw new Error("API returned unsuccessful response")
+            throw new Error("API returned unsuccessful response");
           }
 
           // ตั้งค่าข้อมูลสำหรับ modal
@@ -680,75 +757,82 @@ function NewBookingPageContent() {
             booking_date: format(selectedDate, "MMMM d, yyyy"),
             booking_time: `${startTime} - ${endTime}`,
             purpose: formData.purpose,
-          })
+          });
 
           // แสดง modal ยืนยัน
-          setShowConfirmation(true)
+          setShowConfirmation(true);
         } catch (parseError) {
-          console.error("Error parsing API response:", parseError)
-          throw new Error("Could not parse server response")
+          console.error("Error parsing API response:", parseError);
+          throw new Error("Could not parse server response");
         }
 
         // บันทึกข้อมูลผู้ใช้ใน localStorage
         try {
-          localStorage.setItem("memberId", formData.memberId || "")
-          localStorage.setItem("memberName", formData.name)
-          localStorage.setItem("memberEmail", formData.email)
-          localStorage.setItem("memberPhone", formData.phone)
+          localStorage.setItem("memberId", formData.memberId || "");
+          localStorage.setItem("memberName", formData.name);
+          localStorage.setItem("memberEmail", formData.email);
+          localStorage.setItem("memberPhone", formData.phone);
         } catch (storageError) {
-          console.error("Error storing member info:", storageError)
+          console.error("Error storing member info:", storageError);
           // Continue anyway, as this is just for convenience
         }
 
-        toast.success("Thanks! Your booking has been received and is pending approval")
+        toast.success(
+          "Thanks! Your booking has been received and is pending approval"
+        );
       } catch (err) {
-        console.error("API call error:", err)
+        console.error("API call error:", err);
         toast.error(
-          err instanceof Error ? err.message : "An error occurred while creating your booking. Please try again.",
-        )
-        setIsSubmitting(false)
-        return
+          err instanceof Error
+            ? err.message
+            : "An error occurred while creating your booking. Please try again."
+        );
+        setIsSubmitting(false);
+        return;
       }
 
       // ไม่ต้องส่งอีเมลอีกครั้ง เพราะ API จะจัดการให้แล้ว
     } catch (err: any) {
-      console.error("Booking error:", err)
-      toast.error(err.message || "An error occurred while creating your booking. Please try again.")
+      console.error("Booking error:", err);
+      toast.error(
+        err.message ||
+          "An error occurred while creating your booking. Please try again."
+      );
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   function handleConfirmationClose() {
-    setShowConfirmation(false)
-    setIsSubmitting(false)
-    router.push("/")
+    setShowConfirmation(false);
+    setIsSubmitting(false);
+    router.push("/");
   }
 
   const paymentMethods = [
     { value: "cash", label: "Cash" },
     { value: "bank_transfer", label: "Bank Transfer" },
-  ]
+  ];
 
   const bookingTypes = [
     { value: "regular", label: "Regular" },
     { value: "event", label: "Event" },
     { value: "other", label: "Other" },
-  ]
+  ];
 
   // Handle date picker button click
   const handleDatePickerButtonClick = (e: React.MouseEvent) => {
     if (e) {
-      e.preventDefault() // Prevent form submission
-      e.stopPropagation() // Stop event propagation
+      e.preventDefault(); // Prevent form submission
+      e.stopPropagation(); // Stop event propagation
     }
-    setDatePickerOpen(!datePickerOpen)
-  }
+    setDatePickerOpen(!datePickerOpen);
+  };
 
   // Handle back to admin dashboard
   const handleBackToAdmin = () => {
-    router.push("/admin")
-  }
+    router.push("/admin");
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -786,7 +870,10 @@ function NewBookingPageContent() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, staggerChildren: 0.1 }}
                 >
-                  <RoomSelectionGrid rooms={rooms} onSelectRoom={handleRoomSelect} />
+                  <RoomSelectionGrid
+                    rooms={rooms}
+                    onSelectRoom={handleRoomSelect}
+                  />
                 </motion.div>
               </AnimatePresence>
             )}
@@ -804,7 +891,11 @@ function NewBookingPageContent() {
                   Back to Admin Dashboard
                 </Button>
               ) : (
-                <Button variant="ghost" onClick={handleBackToRooms} className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  onClick={handleBackToRooms}
+                  className="flex items-center gap-1"
+                >
                   <ArrowLeft className="h-4 w-4" />
                   Back to Rooms
                 </Button>
@@ -821,41 +912,62 @@ function NewBookingPageContent() {
               >
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-xl sm:text-2xl">Book a Meeting Room</CardTitle>
-                    <CardDescription>Fill out the form below to schedule a meeting room.</CardDescription>
+                    <CardTitle className="text-xl sm:text-2xl">
+                      Book a Meeting Room
+                    </CardTitle>
+                    <CardDescription>
+                      Fill out the form below to schedule a meeting room.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form
                       onSubmit={(e) => {
-                        e.preventDefault()
-                        handleSubmit(e)
+                        e.preventDefault();
+                        handleSubmit(e);
                       }}
                       className="space-y-4 sm:space-y-6"
                     >
                       {!isLoggedIn && !isAdmin && (
                         <Alert className="mb-6 bg-blue-50 border-blue-200">
                           <AlertCircle className="h-4 w-4 text-blue-600" />
-                          <AlertTitle className="text-blue-800">Not logged in</AlertTitle>
+                          <AlertTitle className="text-blue-800">
+                            Not logged in
+                          </AlertTitle>
                           <AlertDescription className="text-blue-700">
                             Please{" "}
-                            <Link href="/login" className="font-medium underline">
+                            <Link
+                              href="/login"
+                              className="font-medium underline"
+                            >
                               log in
                             </Link>{" "}
                             or{" "}
-                            <Link href="/register" className="font-medium underline">
+                            <Link
+                              href="/register"
+                              className="font-medium underline"
+                            >
                               register
                             </Link>{" "}
-                            to create a booking. Logging in will allow you to track and manage your bookings.
+                            to create a booking. Logging in will allow you to
+                            track and manage your bookings.
                           </AlertDescription>
                         </Alert>
                       )}
                       {showMemberWarning && (
-                        <Alert variant="warning" className="bg-amber-50 border-amber-200">
+                        <Alert
+                          variant="warning"
+                          className="bg-amber-50 border-amber-200"
+                        >
                           <AlertCircle className="h-4 w-4 text-amber-600" />
-                          <AlertTitle className="text-amber-800">Member ID not found</AlertTitle>
+                          <AlertTitle className="text-amber-800">
+                            Member ID not found
+                          </AlertTitle>
                           <AlertDescription className="text-amber-700">
                             The member ID you entered is not valid.{" "}
-                            <Link href="/register" className="font-medium underline">
+                            <Link
+                              href="/register"
+                              className="font-medium underline"
+                            >
                               Register as a member
                             </Link>{" "}
                             to receive benefits.
@@ -864,12 +976,17 @@ function NewBookingPageContent() {
                       )}
 
                       {hasPendingBooking && (
-                        <Alert variant="warning" className="bg-amber-50 border-amber-200">
+                        <Alert
+                          variant="warning"
+                          className="bg-amber-50 border-amber-200"
+                        >
                           <AlertCircle className="h-4 w-4 text-amber-600" />
-                          <AlertTitle className="text-amber-800">Pending Booking</AlertTitle>
+                          <AlertTitle className="text-amber-800">
+                            Pending Booking
+                          </AlertTitle>
                           <AlertDescription className="text-amber-700">
-                            You already have a pending booking. You can only make one booking at a time until it's
-                            confirmed.
+                            You already have a pending booking. You can only
+                            make one booking at a time until it's confirmed.
                           </AlertDescription>
                         </Alert>
                       )}
@@ -879,7 +996,9 @@ function NewBookingPageContent() {
                           <AlertCircle className="h-4 w-4" />
                           <AlertTitle>Debug Information</AlertTitle>
                           <AlertDescription>
-                            <pre className="text-xs overflow-auto max-h-40">{debugInfo}</pre>
+                            <pre className="text-xs overflow-auto max-h-40">
+                              {debugInfo}
+                            </pre>
                           </AlertDescription>
                         </Alert>
                       )}
@@ -901,9 +1020,15 @@ function NewBookingPageContent() {
                             maxLength={7}
                           />
                           {memberVerified === true && (
-                            <p className="text-xs text-muted-foreground">Member verified ✓</p>
+                            <p className="text-xs text-muted-foreground">
+                              Member verified ✓
+                            </p>
                           )}
-                          {formErrors.memberId && <p className="text-xs text-destructive">{formErrors.memberId}</p>}
+                          {formErrors.memberId && (
+                            <p className="text-xs text-destructive">
+                              {formErrors.memberId}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -915,12 +1040,22 @@ function NewBookingPageContent() {
                             value={formData.name}
                             onChange={handleInputChange}
                             readOnly={memberFieldsReadOnly}
-                            className={memberFieldsReadOnly ? "bg-muted cursor-not-allowed" : ""}
+                            className={
+                              memberFieldsReadOnly
+                                ? "bg-muted cursor-not-allowed"
+                                : ""
+                            }
                           />
                           {memberFieldsReadOnly && (
-                            <p className="text-xs text-muted-foreground">Member information retrieved automatically</p>
+                            <p className="text-xs text-muted-foreground">
+                              Member information retrieved automatically
+                            </p>
                           )}
-                          {formErrors.name && <p className="text-xs text-destructive">{formErrors.name}</p>}
+                          {formErrors.name && (
+                            <p className="text-xs text-destructive">
+                              {formErrors.name}
+                            </p>
+                          )}
                         </div>
                       </motion.div>
 
@@ -940,12 +1075,21 @@ function NewBookingPageContent() {
                             value={formData.email}
                             onChange={handleInputChange}
                             readOnly={memberFieldsReadOnly}
-                            className={memberFieldsReadOnly ? "bg-muted cursor-not-allowed" : ""}
+                            className={
+                              memberFieldsReadOnly
+                                ? "bg-muted cursor-not-allowed"
+                                : ""
+                            }
                           />
                           <p className="text-xs text-muted-foreground">
-                            Must be a valid email format (e.g., name@example.com)
+                            Must be a valid email format (e.g.,
+                            name@example.com)
                           </p>
-                          {formErrors.email && <p className="text-xs text-destructive">{formErrors.email}</p>}
+                          {formErrors.email && (
+                            <p className="text-xs text-destructive">
+                              {formErrors.email}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -957,12 +1101,21 @@ function NewBookingPageContent() {
                             value={formData.phone}
                             onChange={handleInputChange}
                             readOnly={memberFieldsReadOnly}
-                            className={memberFieldsReadOnly ? "bg-muted cursor-not-allowed" : ""}
+                            className={
+                              memberFieldsReadOnly
+                                ? "bg-muted cursor-not-allowed"
+                                : ""
+                            }
                           />
                           <p className="text-xs text-muted-foreground">
-                            Enter your phone number in any format (minimum 5 digits)
+                            Enter your phone number in any format (minimum 5
+                            digits)
                           </p>
-                          {formErrors.phone && <p className="text-xs text-destructive">{formErrors.phone}</p>}
+                          {formErrors.phone && (
+                            <p className="text-xs text-destructive">
+                              {formErrors.phone}
+                            </p>
+                          )}
                         </div>
                       </motion.div>
 
@@ -972,13 +1125,13 @@ function NewBookingPageContent() {
                           <motion.button
                             type="button"
                             onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              setDatePickerOpen(!datePickerOpen)
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDatePickerOpen(!datePickerOpen);
                             }}
                             className={cn(
                               "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                              "cursor-pointer",
+                              "cursor-pointer"
                             )}
                             whileHover={{ backgroundColor: "rgba(0,0,0,0.05)" }}
                             whileTap={{ scale: 0.98 }}
@@ -1000,21 +1153,23 @@ function NewBookingPageContent() {
                           {datePickerOpen && (
                             <div className="absolute z-50 mt-1 w-auto bg-popover p-0 border-2 rounded-lg shadow-lg">
                               <div className="p-3 border-b bg-muted/20">
-                                <h3 className="font-medium text-center">Select Booking Date</h3>
+                                <h3 className="font-medium text-center">
+                                  Select Booking Date
+                                </h3>
                               </div>
                               <Calendar
                                 mode="single"
                                 selected={selectedDate}
                                 onSelect={(date) => {
-                                  setSelectedDate(date)
-                                  setDatePickerOpen(false)
+                                  setSelectedDate(date);
+                                  setDatePickerOpen(false);
                                   // Reset time selections when date changes
-                                  setStartTime("")
-                                  setEndTime("")
+                                  setStartTime("");
+                                  setEndTime("");
                                 }}
                                 disabled={(date) => {
                                   // Only disable past dates, allow current date
-                                  return date < today
+                                  return date < today;
                                 }}
                               />
                               <div className="p-3 border-t bg-muted/20 flex justify-between items-center">
@@ -1023,33 +1178,43 @@ function NewBookingPageContent() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    const today = new Date()
-                                    setSelectedDate(today)
-                                    setDatePickerOpen(false)
-                                    setStartTime("")
-                                    setEndTime("")
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const today = new Date();
+                                    setSelectedDate(today);
+                                    setDatePickerOpen(false);
+                                    setStartTime("");
+                                    setEndTime("");
                                   }}
                                 >
                                   Today
                                 </Button>
                                 <div className="text-xs text-muted-foreground">
-                                  {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "No date selected"}
+                                  {selectedDate
+                                    ? format(selectedDate, "MMMM d, yyyy")
+                                    : "No date selected"}
                                 </div>
                               </div>
                             </div>
                           )}
                         </div>
-                        {selectedDate && format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") && (
-                          <p className="text-xs text-amber-600">
-                            Note: For bookings today, only future time slots are available.
+                        {selectedDate &&
+                          format(selectedDate, "yyyy-MM-dd") ===
+                            format(new Date(), "yyyy-MM-dd") && (
+                            <p className="text-xs text-amber-600">
+                              Note: For bookings today, only future time slots
+                              are available.
+                            </p>
+                          )}
+                        <p className="text-xs text-muted-foreground">
+                          Select a date for your booking. You can book for today
+                          or any future date.
+                        </p>
+                        {formErrors.date && (
+                          <p className="text-xs text-destructive">
+                            {formErrors.date}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          Select a date for your booking. You can book for today or any future date.
-                        </p>
-                        {formErrors.date && <p className="text-xs text-destructive">{formErrors.date}</p>}
                       </div>
 
                       {selectedDate && (
@@ -1074,36 +1239,58 @@ function NewBookingPageContent() {
                               <Select
                                 value={startTime}
                                 onValueChange={(value) => {
-                                  setStartTime(value)
+                                  setStartTime(value);
                                   // Reset end time when start time changes
-                                  setEndTime("")
+                                  setEndTime("");
                                 }}
                               >
                                 <SelectTrigger id="startTime">
                                   <SelectValue placeholder="Select start time" />
                                 </SelectTrigger>
-                                <SelectContent position="popper" align="start" side="bottom">
+                                <SelectContent
+                                  position="popper"
+                                  align="start"
+                                  side="bottom"
+                                >
                                   {startTimeOptions.map((time) => (
-                                    <SelectItem key={time.startTime} value={time.startTime} disabled={!time.enabled}>
+                                    <SelectItem
+                                      key={time.startTime}
+                                      value={time.startTime}
+                                      disabled={!time.enabled}
+                                    >
                                       {time.startTime}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                               {formErrors.startTime && (
-                                <p className="text-xs text-destructive">{formErrors.startTime}</p>
+                                <p className="text-xs text-destructive">
+                                  {formErrors.startTime}
+                                </p>
                               )}
                             </div>
 
                             <div className="space-y-2">
                               <Label htmlFor="endTime">End Time</Label>
-                              <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>
+                              <Select
+                                value={endTime}
+                                onValueChange={setEndTime}
+                                disabled={!startTime}
+                              >
                                 <SelectTrigger id="endTime">
                                   <SelectValue
-                                    placeholder={!startTime ? "Select start time first" : "Select end time"}
+                                    placeholder={
+                                      !startTime
+                                        ? "Select start time first"
+                                        : "Select end time"
+                                    }
                                   />
                                 </SelectTrigger>
-                                <SelectContent position="popper" align="start" side="bottom">
+                                <SelectContent
+                                  position="popper"
+                                  align="start"
+                                  side="bottom"
+                                >
                                   {validEndTimes.map((endTime) => (
                                     <SelectItem key={endTime} value={endTime}>
                                       {endTime}
@@ -1111,7 +1298,11 @@ function NewBookingPageContent() {
                                   ))}
                                 </SelectContent>
                               </Select>
-                              {formErrors.endTime && <p className="text-xs text-destructive">{formErrors.endTime}</p>}
+                              {formErrors.endTime && (
+                                <p className="text-xs text-destructive">
+                                  {formErrors.endTime}
+                                </p>
+                              )}
                             </div>
                           </motion.div>
                         </div>
@@ -1132,7 +1323,11 @@ function NewBookingPageContent() {
                             value={formData.purpose}
                             onChange={handleInputChange}
                           />
-                          {formErrors.purpose && <p className="text-xs text-destructive">{formErrors.purpose}</p>}
+                          {formErrors.purpose && (
+                            <p className="text-xs text-destructive">
+                              {formErrors.purpose}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -1145,7 +1340,11 @@ function NewBookingPageContent() {
                             value={formData.attendees}
                             onChange={handleInputChange}
                           />
-                          {formErrors.attendees && <p className="text-xs text-destructive">{formErrors.attendees}</p>}
+                          {formErrors.attendees && (
+                            <p className="text-xs text-destructive">
+                              {formErrors.attendees}
+                            </p>
+                          )}
                         </div>
                       </motion.div>
 
@@ -1159,7 +1358,11 @@ function NewBookingPageContent() {
                           value={formData.notes}
                           onChange={handleInputChange}
                         />
-                        {formErrors.notes && <p className="text-xs text-destructive">{formErrors.notes}</p>}
+                        {formErrors.notes && (
+                          <p className="text-xs text-destructive">
+                            {formErrors.notes}
+                          </p>
+                        )}
                       </div>
 
                       <motion.div
@@ -1175,7 +1378,7 @@ function NewBookingPageContent() {
                             setFormData((prev) => ({
                               ...prev,
                               paymentMethod: value,
-                            }))
+                            }));
                           }}
                         >
                           <SelectTrigger id="paymentMethod">
@@ -1183,16 +1386,32 @@ function NewBookingPageContent() {
                           </SelectTrigger>
                           <SelectContent>
                             {paymentMethods.map((method) => (
-                              <SelectItem key={method.value} value={method.value}>
+                              <SelectItem
+                                key={method.value}
+                                value={method.value}
+                              >
                                 {method.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         {formErrors.paymentMethod && (
-                          <p className="text-xs text-destructive">{formErrors.paymentMethod}</p>
+                          <p className="text-xs text-destructive">
+                            {formErrors.paymentMethod}
+                          </p>
                         )}
                       </motion.div>
+                      {formData.paymentMethod === "bank_transfer" && (
+                        <div className="space-y-2">
+                          <Image
+                            src={"/placeholder.svg"}
+                            alt="qrCode"
+                            width={400}
+                            height={200}
+                            className="rounded-lg object-cover w-full h-48"
+                          />
+                        </div>
+                      )}
 
                       {isAdmin && (
                         <motion.div
@@ -1208,7 +1427,7 @@ function NewBookingPageContent() {
                               setFormData((prev) => ({
                                 ...prev,
                                 type: value,
-                              }))
+                              }));
                             }}
                           >
                             <SelectTrigger id="bookingType">
@@ -1222,61 +1441,112 @@ function NewBookingPageContent() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <p className="text-xs text-muted-foreground">Admin only: Specify the type of booking</p>
+                          <p className="text-xs text-muted-foreground">
+                            Admin only: Specify the type of booking
+                          </p>
                         </motion.div>
                       )}
 
-                      <div className="space-y-2">
-                        <div className="flex flex-col space-y-1.5">
-                          <Label htmlFor="dropzone-file">Attachment (Optional)</Label>
-                          <div className="flex items-center justify-center w-full">
-                            <motion.label
-                              htmlFor="dropzone-file"
-                              className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 dark:hover:bg-muted/70"
-                              whileHover={{ backgroundColor: "rgba(0,0,0,0.1)" }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <svg
-                                  className="w-6 h-6 mb-2 text-muted-foreground"
-                                  aria-hidden="true"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 20 16"
-                                >
-                                  <path
-                                    stroke="currentColor"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                                  />
-                                </svg>
-                                <p className="text-xs text-muted-foreground">
-                                  <span className="font-semibold">Click to upload</span> (Max: 5MB)
-                                </p>
+                      {formData.paymentMethod === "bank_transfer" && (
+                        <div className="space-y-2">
+                          <div className="flex flex-col space-y-1.5">
+                            <Label htmlFor="dropzone-file">Slip Upload</Label>
+                            <div className="flex items-center justify-center w-full">
+                              <motion.label
+                                htmlFor="dropzone-file"
+                                className="group relative flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 dark:hover:bg-muted/70"
+                                whileHover={{
+                                  backgroundColor: "rgba(0,0,0,0.1)",
+                                }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                {/* 🔧 ดินสอ Hover */}
                                 {selectedFile && (
-                                  <p className="mt-1 text-xs font-medium">Selected: {selectedFile.name}</p>
+                                  <Pencil
+                                    className="absolute opacity-0 group-hover:opacity-100 text-muted-foreground pointer-events-none"
+                                    size={24}
+                                    style={{
+                                      top: "50%",
+                                      left: "50%",
+                                      transform: "translate(-50%, -50%)",
+                                    }}
+                                  />
                                 )}
-                              </div>
-                              <input id="dropzone-file" type="file" className="hidden" onChange={handleFileChange} />
-                            </motion.label>
+
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                  {selectedFile && previewURL ? (
+                                    <img
+                                      src={previewURL}
+                                      alt="Preview"
+                                      className="mt-2 max-h-40 rounded border"
+                                    />
+                                  ) : (
+                                    <>
+                                      <svg
+                                        className="w-6 h-6 mb-2 text-muted-foreground"
+                                        aria-hidden="true"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 20 16"
+                                      >
+                                        <path
+                                          stroke="currentColor"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                                        />
+                                      </svg>
+                                      <p className="text-xs text-muted-foreground">
+                                        <span className="font-semibold">
+                                          Click to upload
+                                        </span>{" "}
+                                        (Max: 5MB)
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
+
+                                <input
+                                  id="dropzone-file"
+                                  type="file"
+                                  className="hidden"
+                                  onChange={handleFileChange}
+                                />
+                              </motion.label>
+                            </div>
                           </div>
+                          {formErrors.attachment && (
+                            <p className="text-xs text-destructive">
+                              {formErrors.attachment}
+                            </p>
+                          )}
                         </div>
-                      </div>
+                      )}
                     </form>
                   </CardContent>
                   <CardFooter className="border-t pt-4 sm:pt-6 flex flex-col sm:flex-row justify-between gap-2">
                     {isAdmin ? (
-                      <Button variant="outline" onClick={handleBackToAdmin} className="w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        onClick={handleBackToAdmin}
+                        className="w-full sm:w-auto"
+                      >
                         Cancel
                       </Button>
                     ) : (
-                      <Button variant="outline" onClick={handleBackToRooms} className="w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        onClick={handleBackToRooms}
+                        className="w-full sm:w-auto"
+                      >
                         Cancel
                       </Button>
                     )}
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
                       <Button
                         type="button"
                         onClick={handleSubmit}
@@ -1317,7 +1587,7 @@ function NewBookingPageContent() {
             open={showConfirmation}
             onOpenChange={(open) => {
               if (!open) {
-                handleConfirmationClose()
+                handleConfirmationClose();
               }
             }}
           >
@@ -1330,7 +1600,9 @@ function NewBookingPageContent() {
               >
                 <DialogHeader>
                   <DialogTitle>Booking Submitted!</DialogTitle>
-                  <DialogDescription>Your meeting room booking has been submitted.</DialogDescription>
+                  <DialogDescription>
+                    Your meeting room booking has been submitted.
+                  </DialogDescription>
                 </DialogHeader>
 
                 {bookingDetails && (
@@ -1350,10 +1622,14 @@ function NewBookingPageContent() {
                     </div>
 
                     <Alert className="bg-blue-50 border-blue-200">
-                      <AlertTitle className="text-blue-800">Booking Submitted</AlertTitle>
+                      <AlertTitle className="text-blue-800">
+                        Booking Submitted
+                      </AlertTitle>
                       <AlertDescription className="text-blue-700">
-                        Your booking has been submitted and is pending admin confirmation. You will receive a
-                        confirmation notification once an administrator approves your booking.
+                        Your booking has been submitted and is pending admin
+                        confirmation. You will receive a confirmation
+                        notification once an administrator approves your
+                        booking.
                       </AlertDescription>
                     </Alert>
                   </div>
@@ -1364,15 +1640,17 @@ function NewBookingPageContent() {
                     {isAdmin ? (
                       <Button
                         onClick={() => {
-                          setShowConfirmation(false)
-                          setIsSubmitting(false)
-                          router.push("/admin")
+                          setShowConfirmation(false);
+                          setIsSubmitting(false);
+                          router.push("/admin");
                         }}
                       >
                         Go to Admin Dashboard
                       </Button>
                     ) : (
-                      <Button onClick={handleConfirmationClose}>Go to Home</Button>
+                      <Button onClick={handleConfirmationClose}>
+                        Go to Home
+                      </Button>
                     )}
                   </div>
                 </DialogFooter>
@@ -1382,7 +1660,7 @@ function NewBookingPageContent() {
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
 
 export default function NewBookingPage() {
@@ -1390,5 +1668,5 @@ export default function NewBookingPage() {
     <AuthGuard>
       <NewBookingPageContent />
     </AuthGuard>
-  )
+  );
 }
