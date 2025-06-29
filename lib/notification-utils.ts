@@ -118,12 +118,11 @@ export async function createUserNotification(
       .from("user_notifications")
       .insert([
         {
-          member_id: memberId,
+          user_id: memberId,
           title: title,
           message: message,
           type: type,
-          priority: priority,
-          read: false,
+          is_read: false,
         },
       ])
       .select()

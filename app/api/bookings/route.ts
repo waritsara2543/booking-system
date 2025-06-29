@@ -160,6 +160,12 @@ export async function PUT(request: Request) {
       updatedBooking.email,
       updatedBooking
     )
+    const adminEmail = "pidtaya.p@btc-space.com"
+      await sendBookingConfirmedEmail(adminEmail, {
+        ...updatedBooking,
+        room_name: roomName,
+        booking_date: formattedDate,
+      })
 
     // If member_id is provided, create user notification
     if (bookingData.member_id) {
@@ -200,10 +206,8 @@ export async function PUT(request: Request) {
           const notificationResult = await notifyUserOfBookingStatusChange(
             userIdForNotification,
             id,
-            roomName,
-            formattedDate,
             status,
-            notes,
+            roomName,
           )
 
           console.log("Notification result:", notificationResult)
