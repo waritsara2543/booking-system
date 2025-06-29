@@ -104,8 +104,8 @@ export default function AdminDashboardPage() {
           created_at
         `
         )
-        .gte("date", fromDate)
-        .lte("date", toDate)
+        .gte("date", `${fromDate} 00:00:00`)
+        .lte("date", `${toDate} 23:59:59`)
         .order("date", { ascending: true });
 
       if (bookingsError) throw bookingsError;
@@ -156,8 +156,8 @@ export default function AdminDashboardPage() {
           packages(name, price, duration_days, description)
         `
         )
-        .gte("created_at", fromDate)
-        .lte("created_at", toDate)
+        .gte("created_at", `${fromDate} 00:00:00`)
+        .lte("created_at", `${toDate} 23:59:59`)
         .order("created_at", { ascending: false });
 
       if (packagesError) throw packagesError;
