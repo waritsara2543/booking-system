@@ -1,10 +1,20 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { CalendarDays, LayoutDashboard, Users, FileText, DoorOpen, Wifi, Package, Mail } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  CalendarDays,
+  LayoutDashboard,
+  Users,
+  FileText,
+  DoorOpen,
+  Wifi,
+  Package,
+  Mail,
+  NotebookPen,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const adminRoutes = [
   {
@@ -21,6 +31,11 @@ const adminRoutes = [
     title: "User Management",
     href: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "Event Registration",
+    href: "/admin/events",
+    icon: NotebookPen,
   },
   {
     title: "WiFi Credentials",
@@ -52,15 +67,17 @@ const adminRoutes = [
     href: "/admin/email-test",
     icon: Mail,
   },
-]
+];
 
 export function AdminSidebar() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <aside className="hidden md:flex flex-col w-full">
       <div className="mt-8">
-        <h3 className="px-4 text-sm font-semibold text-muted-foreground mb-2">Admin Navigation</h3>
+        <h3 className="px-4 text-sm font-semibold text-muted-foreground mb-2">
+          Admin Navigation
+        </h3>
         <nav className="space-y-1">
           {adminRoutes.map((route) => (
             <Link key={route.href} href={route.href}>
@@ -71,7 +88,7 @@ export function AdminSidebar() {
                   (pathname === route.href ||
                     (pathname === "/bookings" && route.href === "/bookings") ||
                     (pathname === "/calendar" && route.href === "/calendar")) &&
-                    "bg-muted",
+                    "bg-muted"
                 )}
               >
                 <route.icon className="mr-2 h-4 w-4" />
@@ -82,5 +99,5 @@ export function AdminSidebar() {
         </nav>
       </div>
     </aside>
-  )
+  );
 }
